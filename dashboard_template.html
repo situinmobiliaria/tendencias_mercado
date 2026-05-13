@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Inmobiliario – SITU · Aspen Capital</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+:root{
+  /* Extraídos directamente de los logos SITU + Aspen Capital */
+  --navy:#1a3460;--navy2:#2558a0;--burg:#7b1c2e;--burg2:#9e2035;
+  --gold:#b8915a;--dark:#2c3548;--mid:#5c6b7a;--dim:#8a9ab0;
+  --white:#ffffff;--light:#f4f5f7;--card:#fafbfc;
+  --brd:#dde1e9;--brd2:#eaedf2;
+}
+*{box-sizing:border-box}
+body{background:var(--light);color:var(--dark);font-family:"Segoe UI",system-ui,sans-serif;min-height:100vh;margin:0}
+.shell{display:flex;flex-direction:column;height:100vh}
+/* Topbar */
+.topbar{background:var(--white);border-bottom:2px solid var(--brd);padding:.35rem 1.1rem;display:flex;align-items:center;gap:.65rem;flex-shrink:0;box-shadow:0 1px 5px rgba(0,0,0,.07)}
+.tb-sep{width:1px;height:26px;background:var(--brd);margin:0 .1rem}
+.tb-title{font-size:.78rem;font-weight:600;color:var(--mid)}
+.period-pill{background:rgba(26,58,107,.08);color:var(--navy);border:1px solid rgba(26,58,107,.22);border-radius:20px;padding:.12rem .58rem;font-size:.68rem;font-weight:700}
+.tb-src{font-size:.63rem;color:var(--dim);margin-left:auto}
+/* Layout */
+.body-row{display:flex;flex:1;overflow:hidden}
+/* Sidebar */
+.sidebar{width:244px;flex-shrink:0;background:var(--white);border-left:1px solid var(--brd);overflow-y:auto;padding:.65rem;display:flex;flex-direction:column;gap:.5rem;order:2}
+.sb-sec{background:var(--card);border:1px solid var(--brd2);border-radius:8px;padding:.65rem}
+.sb-ttl{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:.5rem;display:flex;align-items:center;gap:.3rem}
+.sb-ttl::before{content:'';display:block;width:3px;height:.76em;background:var(--gold);border-radius:2px}
+.uz{border:2px dashed var(--brd);border-radius:6px;padding:.55rem .44rem;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;font-size:.68rem}
+.uz:hover,.uz.over{border-color:var(--navy);background:rgba(26,58,107,.04)}
+.uz.ok{border-color:var(--navy2);background:rgba(37,99,168,.05)}
+.uz-icon{font-size:1.15rem;line-height:1.3}
+.uz-name{font-weight:600;color:var(--dark);margin:.08rem 0 .02rem;font-size:.68rem}
+.uz-sub{color:var(--dim);font-size:.58rem}
+.cfg-lbl{font-size:.59rem;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin:.36rem 0 .11rem}
+.bnd-prev{font-size:.57rem;color:var(--dim);margin-top:.2rem;line-height:1.36}
+input.form-control,select.form-select{background:var(--white)!important;border-color:var(--brd)!important;color:var(--dark)!important;font-size:.72rem}
+input.form-control:focus,select.form-select:focus{border-color:var(--navy)!important;box-shadow:0 0 0 .12rem rgba(26,58,107,.12)!important}
+.btn-act{width:100%;margin-top:.42rem;background:var(--dark);border:none;color:var(--white);font-weight:600;font-size:.72rem;padding:.33rem;border-radius:6px;cursor:pointer;transition:background .15s}
+.btn-act:hover{background:var(--mid)}
+.btn-act:disabled{background:var(--brd2);color:var(--dim);cursor:default}
+.btn-gold{background:var(--gold)!important}
+.btn-gold:hover{background:#c9a06a!important}
+.upd-st{font-size:.59rem;color:var(--dim);text-align:center;margin-top:.2rem;min-height:.84em}
+/* Main */
+.main{flex:1;overflow-y:auto;padding:.78rem 1rem;order:1}
+/* KPI row */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.78rem}
+.kpi{background:var(--white);border:1px solid var(--brd);border-radius:8px;padding:.56rem .78rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.kpi-val{font-size:1.44rem;font-weight:700;color:var(--dark);line-height:1}
+.kpi-lbl{font-size:.57rem;color:var(--dim);margin-top:.17rem;text-transform:uppercase;letter-spacing:.04em}
+/* Nav tabs */
+.nav-tabs{border-color:var(--brd);flex-wrap:nowrap;overflow-x:auto}
+.nav-tabs .nav-link{color:var(--mid);border:1px solid transparent;border-radius:5px 5px 0 0;font-size:.72rem;padding:.22rem .58rem;background:transparent;white-space:nowrap}
+.nav-tabs .nav-link:hover{color:var(--dark);background:var(--light)}
+.nav-tabs .nav-link.active{background:var(--white);border-color:var(--brd) var(--brd) var(--white);color:var(--navy);font-weight:600}
+.tab-content{padding-top:.74rem}
+/* Chart wrap */
+.cw{background:var(--white);border:1px solid var(--brd);border-radius:8px;padding:.7rem .82rem .46rem;margin-bottom:.74rem;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.ct{font-size:.63rem;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;display:flex;align-items:center;gap:.26rem}
+.ct::before{content:'';display:block;width:3px;height:.76em;background:var(--navy);border-radius:2px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:.74rem}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.74rem}
+/* Filter row */
+.flt-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.68rem;flex-wrap:wrap}
+.flt-lbl{font-size:.6rem;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.flt-sel{font-size:.71rem;padding:.19rem .46rem;border:1px solid var(--brd);border-radius:5px;background:var(--white);color:var(--dark);cursor:pointer;max-width:180px}
+.flt-sel:focus{outline:none;border-color:var(--navy)}
+.flt-note{font-size:.6rem;color:var(--dim);background:rgba(26,58,107,.04);border:1px solid var(--brd2);border-radius:5px;padding:.22rem .5rem;margin-left:auto}
+/* Band summary */
+.band-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-bottom:.74rem}
+.bs-card{background:var(--white);border:1px solid var(--brd);border-radius:8px;padding:.5rem .68rem;position:relative;overflow:hidden}
+.bs-card.cn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--navy)}
+.bs-card.cb::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--burg)}
+.bs-card.cg::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--gold)}
+.bs-val{font-size:1.24rem;font-weight:700;line-height:1}
+.bs-val.cn{color:var(--navy)}.bs-val.cb{color:var(--burg)}.bs-val.cg{color:var(--gold)}
+.bs-lbl{font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-top:.13rem}
+/* Project KPI */
+.sum-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.74rem}
+.sum-card{background:var(--white);border:1px solid var(--brd);border-radius:8px;padding:.5rem .68rem;position:relative;overflow:hidden}
+.sum-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--navy)}
+.sum-val{font-size:1.24rem;font-weight:700;color:var(--navy)}
+.sum-lbl{font-size:.56rem;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;margin-top:.13rem}
+/* Filter buttons */
+.flt-btns{display:flex;gap:.28rem;flex-wrap:wrap;margin-bottom:.64rem}
+.flt-btn{font-size:.65rem;padding:.18rem .58rem;border:1.5px solid var(--brd);border-radius:20px;background:var(--white);color:var(--mid);cursor:pointer;transition:all .14s;font-weight:500;line-height:1.38}
+.flt-btn:hover{border-color:var(--navy);color:var(--navy)}
+.flt-btn.active{background:var(--navy);border-color:var(--navy);color:var(--white);font-weight:600}
+.flt-btn.active.burg{background:var(--burg);border-color:var(--burg)}
+/* Tables */
+.table{font-size:.7rem;color:var(--dark)}
+.table th{color:var(--mid);font-weight:600;font-size:.6rem;text-transform:uppercase;white-space:nowrap;border-bottom:2px solid var(--brd)!important;border-top:none!important}
+.table td{white-space:nowrap;border-color:var(--brd2)!important;vertical-align:middle}
+.table tbody tr:hover{background:rgba(26,58,107,.03)}
+.badge-estado{font-size:.58rem;padding:.15rem .36rem;border-radius:4px;font-weight:600}
+.be-ejec{background:rgba(26,58,107,.1);color:var(--navy)}
+.be-term{background:rgba(184,145,90,.13);color:#7a5828}
+.be-sin{background:rgba(123,28,46,.1);color:var(--burg)}
+.be-otro{background:rgba(138,154,176,.1);color:var(--dim)}
+/* Tipología sub-row */
+.tip-row{background:rgba(26,58,107,.02)!important;font-size:.65rem}
+.tip-row td{color:var(--mid);border-left:3px solid rgba(26,58,107,.08)!important}
+/* Simulation panel */
+.sim-panel{background:var(--white);border:1px solid var(--brd);border-radius:8px;padding:.7rem .82rem;margin-bottom:.74rem}
+.sim-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-bottom:.55rem}
+.sim-inp label{font-size:.57rem;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.18rem}
+/* Upload note */
+.upload-note{font-size:.6rem;color:var(--dim);text-align:center;padding:.3rem 0}
+/* Project multi-picker */
+.proj-picker{max-height:110px;overflow-y:auto;border:1px solid var(--brd);border-radius:6px;background:var(--white);padding:.26rem .3rem;margin-bottom:.3rem}
+.proj-check{display:flex;align-items:center;gap:.3rem;padding:.12rem .26rem;font-size:.66rem;cursor:pointer;border-radius:4px;transition:background .12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-check:hover{background:rgba(26,58,107,.05)}
+.proj-check input[type=checkbox]{accent-color:var(--navy);width:12px;height:12px;cursor:pointer;flex-shrink:0}
+.proj-sel-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.22rem}
+.proj-sel-count{font-size:.59rem;color:var(--dim);font-style:italic}
+.proj-sel-actions{display:flex;gap:.3rem}
+.proj-sel-actions button{font-size:.58rem;padding:.06rem .3rem;border:1px solid var(--brd);border-radius:3px;background:var(--white);color:var(--mid);cursor:pointer}
+.proj-sel-actions button:hover{border-color:var(--navy);color:var(--navy)}
+/* Dashboard filter grid */
+.dash-flt-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.45rem;margin-bottom:.68rem}
+.dash-flt-item label{font-size:.57rem;color:var(--dim);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:.1rem}
+.range-inp{display:flex;align-items:center;gap:.18rem}
+.range-inp input{flex:1;font-size:.69rem;padding:.15rem .28rem;border:1px solid var(--brd);border-radius:4px;background:var(--white);color:var(--dark);min-width:0;width:100%}
+.range-inp input:focus{outline:none;border-color:var(--navy)}
+.range-sep{font-size:.58rem;color:var(--dim);white-space:nowrap}
+@media(max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.band-sum{grid-template-columns:1fr 1fr}.sim-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:740px){.sidebar{width:100%;border-left:none;border-top:1px solid var(--brd);order:2}.body-row{flex-direction:column}.main{order:1}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- Topbar con logos reales PNG -->
+<div class="topbar">
+  <img src="__SITU_LOGO__" alt="SITU Inmobiliaria" style="height:44px;object-fit:contain;flex-shrink:0">
+  <div class="tb-sep"></div>
+  <img src="__ASPEN_LOGO__" alt="Aspen Capital" style="height:44px;object-fit:contain;flex-shrink:0">
+  <div class="tb-sep"></div>
+  <span class="tb-title">Mercado Inmobiliario</span>
+  <span class="period-pill" id="periodBadge">1er Trimestre 2026</span>
+  <span class="tb-src" id="dataSrc">GFK Adimark · GfK Reporte — 1T 2002–1T 2026</span>
+</div>
+
+<div class="body-row">
+<div class="main">
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-val" id="kOf">—</div><div class="kpi-lbl">Oferta Disponible (últ. trim.)</div></div>
+    <div class="kpi"><div class="kpi-val" id="kVt">—</div><div class="kpi-lbl">Venta mensual (un/mes)</div></div>
+    <div class="kpi"><div class="kpi-val" id="kVl">—</div><div class="kpi-lbl">Velocidad de Venta</div></div>
+    <div class="kpi"><div class="kpi-val" id="kPr">—</div><div class="kpi-lbl">Proyectos activos</div></div>
+  </div>
+
+  <ul class="nav nav-tabs" id="mainTabs">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tEvo">Evolución</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tSup">Por Superficie</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tPrc">Por Precio</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tSnap">Snapshot</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tCom">Comunas</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tProy">Proyectos</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tDash">Dashboard Proy.</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tPerm">Permisos</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tProj">Proyección</a></li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- ── EVOLUCIÓN ── -->
+    <div class="tab-pane fade show active" id="tEvo">
+      <div class="flt-row">
+        <span class="flt-lbl">Comuna</span>
+        <select class="flt-sel" id="evoComuna" style="max-width:200px" onchange="renderEvo()"></select>
+        <span class="flt-lbl" style="margin-left:.25rem">Tipo</span>
+        <select class="flt-sel" id="evoTipo"><option>Departamentos</option></select>
+        <span class="flt-note">Desglose precio UF disponible solo Vitacura</span>
+      </div>
+      <div class="cw">
+        <div class="ct" id="ctEvoLabel">Evolución Oferta &amp; Venta</div>
+        <canvas id="cEvo" height="72"></canvas>
+      </div>
+      <div class="two-col">
+        <div class="cw"><div class="ct">% Velocidad de Venta</div><canvas id="cVel" height="110"></canvas></div>
+        <div class="cw" id="cwEvoP">
+          <div class="ct">Venta por Rango de Precio (UF) · Vitacura</div>
+          <canvas id="cEvoP" height="110"></canvas>
+          <div id="cEvoPMsg" style="display:none;padding:1.4rem;text-align:center;color:var(--dim);font-size:.72rem">Desglose por precio solo disponible para <strong>Vitacura</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── POR SUPERFICIE ── -->
+    <div class="tab-pane fade" id="tSup">
+      <div class="flt-row">
+        <span class="flt-lbl">Rango destacado</span>
+        <select class="flt-sel" id="selSupBand" onchange="updateSupDrill()"><option value="">— Todos —</option></select>
+        <span class="flt-note" id="supBandNote" style="display:none">Análisis detallado del rango seleccionado</span>
+      </div>
+      <!-- Drill-down summary cards -->
+      <div class="band-sum" id="supBandSum" style="display:none">
+        <div class="bs-card cn"><div class="bs-val cn" id="bsOf">—</div><div class="bs-lbl">Oferta disp. (últ. trim.)</div></div>
+        <div class="bs-card cb"><div class="bs-val cb" id="bsVt">—</div><div class="bs-lbl">Venta/mes (últ. trim.)</div></div>
+        <div class="bs-card cg"><div class="bs-val cg" id="bsVl">—</div><div class="bs-lbl">% Vel. Venta (últ. trim.)</div></div>
+      </div>
+      <!-- Drill-down combo chart for selected band -->
+      <div class="cw" id="supDrillWrap" style="display:none">
+        <div class="ct" id="supDrillTitle">Evolución del Rango Seleccionado</div>
+        <canvas id="cSupDrill" height="68"></canvas>
+      </div>
+      <div class="cw"><div class="ct">Oferta Disponible por Rango de Superficie</div><canvas id="cSOf" height="74"></canvas></div>
+      <div class="cw"><div class="ct">Venta Mensual (un/mes) por Rango de Superficie</div><canvas id="cSVt" height="74"></canvas></div>
+      <div class="cw"><div class="ct">% Velocidad de Venta por Rango de Superficie</div><canvas id="cSVl" height="52"></canvas></div>
+    </div>
+
+    <!-- ── POR PRECIO ── -->
+    <div class="tab-pane fade" id="tPrc">
+      <div class="flt-row">
+        <span class="flt-lbl">Rango destacado</span>
+        <select class="flt-sel" id="selPrcBand" onchange="updatePrcDrill()"><option value="">— Todos —</option></select>
+        <span class="flt-note" id="prcBandNote" style="display:none">Análisis detallado del rango seleccionado</span>
+      </div>
+      <div class="band-sum" id="prcBandSum" style="display:none">
+        <div class="bs-card cn"><div class="bs-val cn" id="bpOf">—</div><div class="bs-lbl">Oferta disp. (últ. trim.)</div></div>
+        <div class="bs-card cb"><div class="bs-val cb" id="bpVt">—</div><div class="bs-lbl">Venta/mes (últ. trim.)</div></div>
+        <div class="bs-card cg"><div class="bs-val cg" id="bpVl">—</div><div class="bs-lbl">% Vel. Venta (últ. trim.)</div></div>
+      </div>
+      <div class="cw" id="prcDrillWrap" style="display:none">
+        <div class="ct" id="prcDrillTitle">Evolución del Rango Seleccionado</div>
+        <canvas id="cPrcDrill" height="68"></canvas>
+      </div>
+      <div class="cw"><div class="ct">Oferta Disponible por Rango de Precio (UF)</div><canvas id="cPOf" height="74"></canvas></div>
+      <div class="cw"><div class="ct">Venta Mensual (un/mes) por Rango de Precio (UF)</div><canvas id="cPVt" height="74"></canvas></div>
+      <div class="cw"><div class="ct">% Velocidad de Venta por Rango de Precio (UF)</div><canvas id="cPVl" height="52"></canvas></div>
+    </div>
+
+    <!-- ── SNAPSHOT ── -->
+    <div class="tab-pane fade" id="tSnap">
+      <div class="two-col">
+        <div class="cw"><div class="ct">Oferta vs Venta — Superficie · Período Actual</div><canvas id="cSSn" height="130"></canvas></div>
+        <div class="cw"><div class="ct">Oferta vs Venta — Precio UF · Período Actual</div><canvas id="cPSn" height="130"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── COMUNAS ── -->
+    <div class="tab-pane fade" id="tCom">
+      <div class="flt-row">
+        <span class="flt-lbl">Comunas a comparar</span>
+        <div id="comFltBtns" style="display:flex;gap:.26rem;flex-wrap:wrap"></div>
+      </div>
+      <div class="cw"><div class="ct">Evolución Oferta Disponible — Comparación por Comuna</div><canvas id="cComOf" height="72"></canvas></div>
+      <div class="cw"><div class="ct">Evolución Venta Mensual — Comparación por Comuna</div><canvas id="cComVt" height="72"></canvas></div>
+      <div class="cw"><div class="ct">% Velocidad de Venta — Comparación por Comuna</div><canvas id="cComVl" height="56"></canvas></div>
+    </div>
+
+    <!-- ── PROYECTOS ── -->
+    <div class="tab-pane fade" id="tProy">
+      <div class="flt-btns" id="proyEstFlt">
+        <button class="flt-btn active" data-est="todos" onclick="setProyFlt(this)">Todos</button>
+        <button class="flt-btn" data-est="ejec" onclick="setProyFlt(this)">En ejecución</button>
+        <button class="flt-btn" data-est="sin" onclick="setProyFlt(this)">Sin ejecución</button>
+        <button class="flt-btn" data-est="term" onclick="setProyFlt(this)">Terminada</button>
+        <span style="margin-left:auto;display:flex;gap:.26rem">
+          <button class="flt-btn active" id="btnViewProy" onclick="setProyView('res',this)">Resumen</button>
+          <button class="flt-btn" id="btnViewTip" onclick="setProyView('tip',this)">Con Tipologías</button>
+        </span>
+      </div>
+      <div class="sum-row">
+        <div class="sum-card"><div class="sum-val" id="sPr">—</div><div class="sum-lbl">Proyectos</div></div>
+        <div class="sum-card"><div class="sum-val" id="sOf">—</div><div class="sum-lbl">Unidades disponibles</div></div>
+        <div class="sum-card"><div class="sum-val" id="sVnd">—</div><div class="sum-lbl">% Vendido promedio</div></div>
+        <div class="sum-card"><div class="sum-val" id="sVv">—</div><div class="sum-lbl">Vel. Venta (un/mes)</div></div>
+      </div>
+      <div class="cw">
+        <div class="ct">Proyectos — Detalle</div>
+        <div class="table-responsive"><table class="table table-hover" id="tbPr"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── DASHBOARD PROYECTOS ── -->
+    <div class="tab-pane fade" id="tDash">
+      <div id="dashNoData" class="flt-note" style="margin-bottom:.6rem;display:block">
+        Datos base cargados. Carga un <strong>Reporte de Proyectos</strong> adicional desde el panel lateral para ampliar el universo.
+      </div>
+
+      <!-- Fila 1: Selección de proyectos (agregado) + filtros globales -->
+      <div style="display:grid;grid-template-columns:260px 1fr;gap:.65rem;margin-bottom:.65rem">
+        <!-- Multi-project picker -->
+        <div>
+          <div class="proj-sel-bar">
+            <span class="flt-lbl">Proyectos (agregado)</span>
+            <div class="proj-sel-actions">
+              <button onclick="dashSelAll(true)">Todos</button>
+              <button onclick="dashSelAll(false)">Ninguno</button>
+            </div>
+          </div>
+          <div class="proj-picker" id="dashProjPicker"><!-- populated by JS --></div>
+          <div class="proj-sel-count" id="dashProjCount">Todos los proyectos</div>
+        </div>
+        <!-- Filtros de tipología -->
+        <div>
+          <div class="dash-flt-grid">
+            <div class="dash-flt-item">
+              <label>Estado</label>
+              <select class="flt-sel" id="dashEstSel" onchange="renderDash()" style="width:100%"><option value="">Todos</option></select>
+            </div>
+            <div class="dash-flt-item">
+              <label>Comuna</label>
+              <select class="flt-sel" id="dashComunaSel" onchange="renderDash()" style="width:100%"><option value="">Todas</option></select>
+            </div>
+            <div class="dash-flt-item">
+              <label>Dormitorios</label>
+              <select class="flt-sel" id="dashDormSel" onchange="renderDash()" style="width:100%"><option value="">Todos</option></select>
+            </div>
+            <div class="dash-flt-item">
+              <label>Superficie útil m²</label>
+              <div class="range-inp">
+                <input type="number" id="dashSupMin" placeholder="mín" min="0" step="5" oninput="renderDash()">
+                <span class="range-sep">–</span>
+                <input type="number" id="dashSupMax" placeholder="máx" min="0" step="5" oninput="renderDash()">
+              </div>
+            </div>
+            <div class="dash-flt-item">
+              <label>Ticket UF</label>
+              <div class="range-inp">
+                <input type="number" id="dashTickMin" placeholder="mín" min="0" step="500" oninput="renderDash()">
+                <span class="range-sep">–</span>
+                <input type="number" id="dashTickMax" placeholder="máx" min="0" step="500" oninput="renderDash()">
+              </div>
+            </div>
+            <div class="dash-flt-item">
+              <label>UF / m²</label>
+              <div class="range-inp">
+                <input type="number" id="dashUfm2Min" placeholder="mín" min="0" step="5" oninput="renderDash()">
+                <span class="range-sep">–</span>
+                <input type="number" id="dashUfm2Max" placeholder="máx" min="0" step="5" oninput="renderDash()">
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:.4rem;align-items:center">
+            <span class="flt-lbl">Vel. Venta ≥</span>
+            <input type="number" class="flt-sel" id="dashVelMin" placeholder="0" min="0" step="0.5" oninput="renderDash()" style="width:72px">
+            <button class="flt-btn" style="margin-left:auto" onclick="dashClearFlt()">Limpiar filtros</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="sum-row" style="grid-template-columns:repeat(6,1fr)">
+        <div class="sum-card"><div class="sum-val" id="dkPr">—</div><div class="sum-lbl">Proyectos</div></div>
+        <div class="sum-card"><div class="sum-val" id="dkTip">—</div><div class="sum-lbl">Tipologías</div></div>
+        <div class="sum-card"><div class="sum-val" id="dkDisp">—</div><div class="sum-lbl">Disponibles</div></div>
+        <div class="sum-card"><div class="sum-val" id="dkAvgUF">—</div><div class="sum-lbl">UF prom.</div></div>
+        <div class="sum-card"><div class="sum-val" id="dkAvgSup">—</div><div class="sum-lbl">Sup. útil prom. m²</div></div>
+        <div class="sum-card"><div class="sum-val" id="dkAvgUfm2">—</div><div class="sum-lbl">UF/m² prom.</div></div>
+      </div>
+
+      <div class="two-col" style="margin-bottom:.68rem">
+        <div class="cw"><div class="ct">Disponibles por Dormitorios</div><canvas id="cDashDorm" height="120"></canvas></div>
+        <div class="cw"><div class="ct">Precio UF promedio por Tipología</div><canvas id="cDashUF" height="120"></canvas></div>
+      </div>
+      <div class="two-col" style="margin-bottom:.68rem">
+        <div class="cw"><div class="ct">Distribución Superficie Útil (m²)</div><canvas id="cDashSup" height="110"></canvas></div>
+        <div class="cw"><div class="ct">UF/m² por Tipología</div><canvas id="cDashUfm2" height="110"></canvas></div>
+      </div>
+      <div class="cw">
+        <div class="ct">Tipologías por Proyecto</div>
+        <div class="table-responsive"><table class="table table-hover table-sm" id="tbDash"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── PERMISOS ── -->
+    <div class="tab-pane fade" id="tPerm">
+      <div class="cw">
+        <div class="ct">Permisos de Edificación</div>
+        <div class="table-responsive"><table class="table table-hover" id="tbPe"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ── PROYECCIÓN ── -->
+    <div class="tab-pane fade" id="tProj">
+      <div class="sim-panel">
+        <div class="ct" style="margin-bottom:.6rem">Parámetros de Simulación</div>
+        <div class="sim-grid">
+          <div class="sim-inp">
+            <label>Comuna</label>
+            <select class="form-select form-select-sm" id="projComuna" onchange="updateProjDefaults()"></select>
+          </div>
+          <div class="sim-inp">
+            <label>Stock inicial (unidades)</label>
+            <input type="number" class="form-control form-control-sm" id="projStock" value="0" min="0">
+          </div>
+          <div class="sim-inp">
+            <label>Vel. venta (un/mes)</label>
+            <input type="number" class="form-control form-control-sm" id="projVel" value="0" min="0" step="0.5">
+          </div>
+          <div class="sim-inp">
+            <label>Nuevas unidades / trimestre</label>
+            <input type="number" class="form-control form-control-sm" id="projNew" value="100" min="0" step="10">
+          </div>
+          <div class="sim-inp">
+            <label>Tasa absorción permisos</label>
+            <input type="number" class="form-control form-control-sm" id="projRate" value="30" min="0" max="100" step="5">
+            <span style="font-size:.57rem;color:var(--dim)">% de permisos que entran al mercado</span>
+          </div>
+          <div class="sim-inp">
+            <label>Permisos anuales (total)</label>
+            <input type="number" class="form-control form-control-sm" id="projPerm" value="1000" min="0" step="100">
+          </div>
+          <div class="sim-inp">
+            <label>Períodos a proyectar</label>
+            <input type="number" class="form-control form-control-sm" id="projN" value="8" min="2" max="24">
+          </div>
+          <div class="sim-inp" style="display:flex;align-items:flex-end">
+            <button class="btn-act btn-gold" style="width:auto;padding:.33rem .9rem" onclick="renderProyeccion()">Simular</button>
+          </div>
+        </div>
+      </div>
+      <div class="cw">
+        <div class="ct">Stock Proyectado — Evolución Trimestral</div>
+        <canvas id="cProj" height="75"></canvas>
+      </div>
+      <div class="three-col">
+        <div class="cw"><div class="ct">Escenario conservador (vel −20%)</div><canvas id="cProjLow" height="90"></canvas></div>
+        <div class="cw"><div class="ct">Escenario base</div><canvas id="cProjMid" height="90"></canvas></div>
+        <div class="cw"><div class="ct">Escenario optimista (vel +20%)</div><canvas id="cProjHigh" height="90"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div><!-- /main -->
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <!-- Upload 1: GFK Adimark -->
+  <div class="sb-sec">
+    <div class="sb-ttl">Actualizar Datos</div>
+    <div class="uz" id="z1" onclick="document.getElementById('f1').click()" ondragover="zev(event,'z1',1)" ondragleave="zev(event,'z1',0)" ondrop="zdrop(event,'a')">
+      <div class="uz-icon">📂</div><div class="uz-name">GFK Adimark</div><div class="uz-sub">Series Históricas (.xls)</div>
+    </div>
+    <input type="file" id="f1" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'a')">
+    <div style="height:.3rem"></div>
+    <!-- Upload 2: GfK Reporte -->
+    <div class="uz" id="z2" onclick="document.getElementById('f2').click()" ondragover="zev(event,'z2',1)" ondragleave="zev(event,'z2',0)" ondrop="zdrop(event,'r')">
+      <div class="uz-icon">📂</div><div class="uz-name">GfK Reporte</div><div class="uz-sub">Reporte Inmobiliario (.xls)</div>
+    </div>
+    <input type="file" id="f2" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'r')">
+    <button class="btn-act btn-gold" id="btnUpd" onclick="doUpdate()" disabled>Actualizar dashboard</button>
+    <div class="upd-st" id="updSt"></div>
+  </div>
+  <!-- Upload 3: Reporte Proyectos -->
+  <div class="sb-sec">
+    <div class="sb-ttl">Dashboard Proyectos</div>
+    <div class="uz" id="z3" onclick="document.getElementById('f3').click()" ondragover="zev(event,'z3',1)" ondragleave="zev(event,'z3',0)" ondrop="zdrop(event,'p')">
+      <div class="uz-icon">🏗</div><div class="uz-name">Reporte de Proyectos</div><div class="uz-sub">Multi-comunas (.xls / .xlsx)</div>
+    </div>
+    <input type="file" id="f3" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'p')">
+    <button class="btn-act" id="btnPR" onclick="doPR()" disabled style="margin-top:.32rem">Cargar proyectos</button>
+    <div class="upload-note">Mismo formato GfK · Multi-comunas</div>
+  </div>
+  <!-- Band config -->
+  <div class="sb-sec">
+    <div class="sb-ttl">Rangos de Análisis</div>
+    <div class="cfg-lbl">Superficie (m²)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.18rem">
+      <div><div style="font-size:.56rem;color:var(--dim)">Base</div><input type="number" id="sB" class="form-control form-control-sm" value="90" step="10" oninput="upPrev()"></div>
+      <div><div style="font-size:.56rem;color:var(--dim)">Spread</div><input type="number" id="sS" class="form-control form-control-sm" value="60" step="10" oninput="upPrev()"></div>
+      <div><div style="font-size:.56rem;color:var(--dim)">N°</div><input type="number" id="sN" class="form-control form-control-sm" value="4" min="2" max="8" oninput="upPrev()"></div>
+    </div>
+    <div class="bnd-prev" id="prS"></div>
+    <div class="cfg-lbl">Precio (UF)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.18rem">
+      <div><div style="font-size:.56rem;color:var(--dim)">Base</div><input type="number" id="pB" class="form-control form-control-sm" value="5000" step="500" oninput="upPrev()"></div>
+      <div><div style="font-size:.56rem;color:var(--dim)">Spread</div><input type="number" id="pS" class="form-control form-control-sm" value="5000" step="500" oninput="upPrev()"></div>
+      <div><div style="font-size:.56rem;color:var(--dim)">N°</div><input type="number" id="pN" class="form-control form-control-sm" value="4" min="2" max="8" oninput="upPrev()"></div>
+    </div>
+    <div class="bnd-prev" id="prP"></div>
+    <div class="cfg-lbl">Foco Superficie (m²)</div>
+    <div style="display:flex;gap:.22rem;align-items:center;margin-bottom:.18rem">
+      <input type="number" id="gSupMin" class="form-control form-control-sm" placeholder="mín" min="0" step="5" oninput="applyGlobalSup()">
+      <span style="font-size:.6rem;color:var(--dim)">–</span>
+      <input type="number" id="gSupMax" class="form-control form-control-sm" placeholder="máx" min="0" step="5" oninput="applyGlobalSup()">
+    </div>
+    <div class="cfg-lbl">Inicio serie</div>
+    <select id="stQ" class="form-select form-select-sm" onchange="renderAll()"></select>
+    <button class="btn-act" style="margin-top:.42rem" onclick="renderAll()">Aplicar</button>
+  </div>
+</div><!-- /sidebar -->
+</div><!-- /body-row -->
+</div><!-- /shell -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const PRELOADED_ADIMARK=__ADIMARK__;
+const PRELOADED_REPORTE=__REPORTE__;
+const PRELOADED_COMUNAS=__COMUNAS__;
+</script>
+<script>
+let AD=PRELOADED_ADIMARK, RE=PRELOADED_REPORTE, CM=PRELOADED_COMUNAS;
+let pA=null,pR=null,pPR=null,PR=null;
+const C={};
+let _ofS=null,_vtS=null,_ofP=null,_vtP=null,_qs=[];
+let _proyFlt='todos',_proyView='res';
+let _selComs=new Set(['VITACURA','LAS CONDES','PROVIDENCIA','SANTIAGO']);
+let _dashSelectedProjs=null; // null=todos; Set=seleccionados específicos
+let _dashProjListKey=''; // para detectar cambio de lista
+
+// ── Upload / file handling ──
+function zev(e,id,on){e.preventDefault();document.getElementById(id).classList.toggle('over',!!on);}
+function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','p':'z3'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
+function hFile(e,t){if(e.target.files[0])pFile(e.target.files[0],t);}
+function pFile(file,type){
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+    if(type==='a'){pA=parseAdimark(wb);markZ('z1',file.name);}
+    else if(type==='r'){pR=parseReporte(wb);markZ('z2',file.name);}
+    else if(type==='p'){pPR=parseProyReport(wb);markZ('z3',file.name);document.getElementById('btnPR').disabled=false;}
+    if(type!=='p')chkReady();
+  };
+  rd.readAsArrayBuffer(file);
+}
+function markZ(id,name){
+  const z=document.getElementById(id);z.classList.add('ok');
+  z.innerHTML='<div style="color:var(--navy2);font-size:1rem">✔</div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">listo — clic para cambiar</div>';
+  const map={'z1':'f1','z2':'f2','z3':'f3'};
+  z.onclick=()=>document.getElementById(map[id]).click();
+}
+function chkReady(){
+  const ok=pA||pR;
+  document.getElementById('btnUpd').disabled=!ok;
+  document.getElementById('updSt').textContent=pA&&pR?'Ambos archivos listos ✓':pA?'GFK Adimark listo':pR?'GfK Reporte listo':'';
+}
+function doUpdate(){
+  if(pA)AD=pA; if(pR)RE=pR;
+  pA=null;pR=null;
+  resetZ('z1','f1','GFK Adimark','Series Históricas (.xls)');
+  resetZ('z2','f2','GfK Reporte','Reporte Inmobiliario (.xls)');
+  document.getElementById('btnUpd').disabled=true;
+  document.getElementById('updSt').textContent='';
+  fillQ(); renderAll();
+}
+function doPR(){
+  if(pPR){PR=pPR;pPR=null;}
+  document.getElementById('btnPR').disabled=true;
+  renderDash();
+}
+function resetZ(zid,fid,name,sub){
+  const z=document.getElementById(zid);z.classList.remove('ok');
+  z.innerHTML='<div class="uz-icon">📂</div><div class="uz-name">'+name+'</div><div class="uz-sub">'+sub+'</div>';
+  z.onclick=()=>document.getElementById(fid).click();
+  document.getElementById(fid).value='';
+}
+
+// ── Quarter ──
+function qN(q){const m=String(q).trim().match(/(\d)T\s*(\d+)/);if(!m)return 0;let y=parseInt(m[2]);if(y<100)y+=(y<50?2000:1900);return y*4+parseInt(m[1]);}
+function fillQ(){
+  const sel=document.getElementById('stQ'),cur=sel.value;sel.innerHTML='';
+  AD.quarters.forEach(q=>{const o=document.createElement('option');o.value=q;o.textContent=q;if(q===(cur||'1T 12')||(!cur&&q==='1T 12'))o.selected=true;sel.appendChild(o);});
+}
+
+// ── Bands ──
+function thArr(b,s,n){return Array.from({length:n},(_,i)=>b+i*s);}
+function bLbls(t,type){
+  const sfx=type==='s'?' m²':' UF',ovr=type==='s'?'>250 m²':'>25.000 UF';
+  const fmt=v=>type==='s'?String(v):v.toLocaleString('es-CL');
+  const l=['< '+fmt(t[0])+sfx];
+  for(let i=1;i<t.length;i++)l.push(fmt(t[i-1])+'–'+fmt(t[i])+sfx);
+  l.push('≥ '+fmt(t[t.length-1])+sfx); l.push(ovr); return l;
+}
+function cls(raw,t,type){
+  const sfx=type==='s'?' m²':' UF',ovr=type==='s'?'>250 m²':'>25.000 UF',rawOvr=type==='s'?'>250':'>25000';
+  const fmt=v=>type==='s'?String(v):v.toLocaleString('es-CL');
+  const s=String(raw).trim();
+  if(s===rawOvr)return ovr;
+  let lo=s.startsWith('<')?0:s.startsWith('>')?parseInt(s.slice(1)):parseInt(s.split('-')[0]);
+  if(isNaN(lo))return 'Otro';
+  for(let i=0;i<t.length;i++){if(lo<t[i])return i===0?'< '+fmt(t[0])+sfx:fmt(t[i-1])+'–'+fmt(t[i])+sfx;}
+  return '≥ '+fmt(t[t.length-1])+sfx;
+}
+function agg(byQR,qs,t,type){
+  const lbls=bLbls(t,type);const ser={};lbls.forEach(l=>ser[l]=[]);
+  for(const q of qs){
+    const qt=byQR[q]||{};const acc={};
+    for(const [r,v] of Object.entries(qt)){const b=cls(r,t,type);acc[b]=(acc[b]||0)+v;}
+    lbls.forEach(l=>ser[l].push(acc[l]||0));
+  }
+  return {lbls,ser};
+}
+function getCfg(){
+  return{
+    sT:thArr(+document.getElementById('sB').value||90,+document.getElementById('sS').value||60,+document.getElementById('sN').value||4),
+    pT:thArr(+document.getElementById('pB').value||5000,+document.getElementById('pS').value||5000,+document.getElementById('pN').value||4),
+    stQ:document.getElementById('stQ').value
+  };
+}
+function upPrev(){
+  const {sT,pT}=getCfg();
+  document.getElementById('prS').textContent=bLbls(sT,'s').join(' · ');
+  document.getElementById('prP').textContent=bLbls(pT,'p').join(' · ');
+}
+
+// ── Colors ──
+const SC=['#1a3a6b','#2563a8','#3b82f6','#6ea8d8','#93c5f0','#c3ddf5','#7c3aed','#b8915a'];
+const PC=['#7b1c2e','#a0293d','#bf4060','#cf6b80','#e09aaa','#f0c2cb','#7c3aed','#b8915a'];
+const CC=['#1a3a6b','#b8915a','#7b1c2e','#7c3aed','#0e6e8c','#b8603a','#8b5e3c','#2563a8','#4a90a4','#c0392b'];
+const GX={ticks:{color:'#8a9ab0',maxRotation:45,font:{size:9}},grid:{color:'#eaedf2'}};
+const GY={ticks:{color:'#8a9ab0',font:{size:9}},grid:{color:'#eaedf2'}};
+
+function dk(id){if(C[id]){C[id].destroy();delete C[id];}}
+
+function mkSt(id,ql,bands,ser,col,yL){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:ql,datasets:bands.map((b,i)=>({label:b,data:ser[b],backgroundColor:col[i%col.length]+'bb',borderColor:col[i%col.length],borderWidth:.5,stack:'s'}))},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',boxWidth:11,font:{size:10}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y.toFixed(0)}}},
+      scales:{x:{...GX,stacked:true},y:{...GY,stacked:true,title:{display:!!yL,text:yL,color:'#8a9ab0'}}}}});
+}
+function mkVelLn(id,ql,ds){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{type:'line',data:{labels:ql,datasets:ds},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',boxWidth:11,font:{size:10}}},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+(c.parsed.y*100).toFixed(1)+'%'}}},
+      scales:{x:GX,y:{...GY,ticks:{...GY.ticks,callback:v=>(v*100).toFixed(1)+'%'},title:{display:true,text:'% Vel. Venta',color:'#8a9ab0'}}}}});
+}
+function mkCombo(id,ql,barData,lineData,barLbl,lineLbl){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{
+    data:{labels:ql,datasets:[
+      {type:'bar',label:barLbl||'Oferta Disponible',data:barData,backgroundColor:'rgba(26,58,107,.13)',borderColor:'#1a3a6b',borderWidth:1,yAxisID:'yOf',order:2},
+      {type:'line',label:lineLbl||'Venta (un/mes)',data:lineData,borderColor:'#b8915a',backgroundColor:'transparent',borderWidth:2.5,pointRadius:2,pointHoverRadius:5,tension:.3,yAxisID:'yVt',order:1}
+    ]},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',font:{size:10}}}},
+      scales:{x:GX,
+        yOf:{...GY,position:'left',title:{display:true,text:'Oferta (unidades)',color:'#8a9ab0'}},
+        yVt:{...GY,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Venta (un/mes)',color:'#b8915a'},ticks:{color:'#b8915a',font:{size:9}}}
+      }}});
+}
+function mkGr(id,lbls,dA,dB){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:lbls,datasets:[
+      {label:'Oferta Disponible',data:dA,backgroundColor:'rgba(26,58,107,.7)',borderColor:'#1a3a6b',borderWidth:1},
+      {label:'Venta Trimestral', data:dB,backgroundColor:'rgba(184,145,90,.75)',borderColor:'#b8915a',borderWidth:1}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{color:'#5c6b7a',font:{size:10}}}},scales:{x:GX,y:GY}}});
+}
+function mkComLine(id,ql,datasets){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{type:'line',data:{labels:ql,datasets},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',boxWidth:11,font:{size:10}}}},
+      scales:{x:GX,y:GY}}});
+}
+function mkBar(id,lbls,vals,col,yL){
+  dk(id);
+  C[id]=new Chart(document.getElementById(id),{type:'bar',
+    data:{labels:lbls,datasets:[{label:yL||'',data:vals,backgroundColor:col,borderWidth:0}]},
+    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{...GX,ticks:{...GX.ticks,maxRotation:35}},y:GY}}});
+}
+
+// ── Commune filter (Comunas tab) ──
+function buildComFlt(){
+  const wrap=document.getElementById('comFltBtns');wrap.innerHTML='';
+  CM.comunas.forEach(com=>{
+    const btn=document.createElement('button');
+    btn.className='flt-btn'+((_selComs.has(com))?' active':'');
+    btn.style.fontSize='.6rem';btn.style.padding='.14rem .45rem';
+    btn.textContent=com.charAt(0)+com.slice(1).toLowerCase();
+    btn.onclick=()=>{
+      if(_selComs.has(com)){if(_selComs.size>1)_selComs.delete(com);}else _selComs.add(com);
+      buildComFlt(); renderComunas();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+// ── Evolución commune dropdown ──
+function buildEvoDdl(){
+  const sel=document.getElementById('evoComuna');
+  sel.innerHTML=CM.comunas.map(c=>'<option value="'+c+'">'+c.charAt(0)+c.slice(1).toLowerCase()+'</option>').join('');
+  sel.value='VITACURA';
+}
+
+// ── Evolución ──
+function renderEvo(){
+  const com=document.getElementById('evoComuna').value||'VITACURA';
+  const {sT,pT,stQ}=getCfg();
+  const sqn=qN(stQ);
+  const comLabel=com.charAt(0)+com.slice(1).toLowerCase();
+  document.getElementById('ctEvoLabel').textContent='Evolución Oferta & Venta — '+comLabel+' · Departamentos';
+
+  if(com==='VITACURA'){
+    const qs=AD.quarters.filter(q=>qN(q)>=sqn);
+    const ofS=agg(AD.oferta.bySup,qs,sT,'s');
+    const vtS=agg(AD.venta.bySup,qs,sT,'s');
+    const sm=(ser,lbls,i)=>lbls.reduce((s,b)=>s+(ser[b][i]||0),0);
+    const toS=qs.map((_,i)=>sm(ofS.ser,ofS.lbls,i));
+    const tvS=qs.map((_,i)=>sm(vtS.ser,vtS.lbls,i));
+    const vlS=toS.map((o,i)=>o>0?(tvS[i]/3)/o:0);
+    mkCombo('cEvo',qs,toS,tvS.map(v=>v/3));
+    mkVelLn('cVel',qs,[{label:'% Vel. Venta',data:vlS,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
+    // Desglose por precio — solo Vitacura
+    const ofP=agg(AD.oferta.byPrec,qs,pT,'p');
+    const vtP=agg(AD.venta.byPrec,qs,pT,'p');
+    // Filtrar bandas con al menos un valor > 0 y construir datasets de líneas
+    const evoPDs=ofP.lbls.map((b,i)=>({
+      label:b,
+      data:vtP.ser[b].map(v=>v/3),
+      borderColor:PC[i%PC.length],
+      backgroundColor:'transparent',
+      borderWidth:1.8,tension:.3,pointRadius:1.2,pointHoverRadius:4
+    })).filter(ds=>ds.data.some(v=>v>0));
+    document.getElementById('cEvoP').style.display='block';
+    document.getElementById('cEvoPMsg').style.display='none';
+    document.getElementById('cwEvoP').style.display='block';
+    if(evoPDs.length) mkComLine('cEvoP',qs,evoPDs);
+    else dk('cEvoP');
+  } else {
+    const cqs=CM.quarters.filter(q=>qN(q)>=sqn);
+    const of=cqs.map(q=>CM.oferta[com]?.[q]||0);
+    const vt=cqs.map(q=>(CM.venta[com]?.[q]||0)/3);
+    const vl=of.map((o,i)=>o>0?vt[i]/o:0);
+    mkCombo('cEvo',cqs,of,vt);
+    mkVelLn('cVel',cqs,[{label:'% Vel. Venta',data:vl,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
+    // Mostrar placeholder en lugar de ocultar el panel
+    dk('cEvoP');
+    document.getElementById('cEvoP').style.display='none';
+    document.getElementById('cEvoPMsg').style.display='block';
+    document.getElementById('cwEvoP').style.display='block';
+  }
+}
+
+// ── Superficie drill ──
+function fillBandSelects(){
+  const {sT,pT}=getCfg();
+  const sl=bLbls(sT,'s'),pl=bLbls(pT,'p');
+  const ss=document.getElementById('selSupBand'),sp=document.getElementById('selPrcBand');
+  const ov=ss.value,pv=sp.value;
+  ss.innerHTML='<option value="">— Todos —</option>'+sl.map(l=>'<option'+(l===ov?' selected':'')+'>'+l+'</option>').join('');
+  sp.innerHTML='<option value="">— Todos —</option>'+pl.map(l=>'<option'+(l===pv?' selected':'')+'>'+l+'</option>').join('');
+}
+function updateSupDrill(){
+  const b=document.getElementById('selSupBand').value;
+  document.getElementById('supBandNote').style.display=b?'block':'none';
+  document.getElementById('supBandSum').style.display=b?'grid':'none';
+  document.getElementById('supDrillWrap').style.display=b?'block':'none';
+  if(!b||!_ofS||!_qs.length)return;
+  const n=_qs.length-1;
+  const of=(_ofS.ser[b]||[])[n]||0;
+  const vt=((_vtS.ser[b]||[])[n]||0)/3;
+  const vl=of>0?vt/of:0;
+  document.getElementById('bsOf').textContent=Math.round(of).toLocaleString('es-CL');
+  document.getElementById('bsVt').textContent=vt.toFixed(1);
+  document.getElementById('bsVl').textContent=(vl*100).toFixed(1)+'%';
+  document.getElementById('supDrillTitle').textContent='Evolución — '+b;
+  const barD=(_ofS.ser[b]||[]);
+  const lineD=(_vtS.ser[b]||[]).map(v=>v/3);
+  mkCombo('cSupDrill',_qs,barD,lineD,'Oferta '+b,'Venta/mes '+b);
+}
+function updatePrcDrill(){
+  const b=document.getElementById('selPrcBand').value;
+  document.getElementById('prcBandNote').style.display=b?'block':'none';
+  document.getElementById('prcBandSum').style.display=b?'grid':'none';
+  document.getElementById('prcDrillWrap').style.display=b?'block':'none';
+  if(!b||!_ofP||!_qs.length)return;
+  const n=_qs.length-1;
+  const of=(_ofP.ser[b]||[])[n]||0;
+  const vt=((_vtP.ser[b]||[])[n]||0)/3;
+  const vl=of>0?vt/of:0;
+  document.getElementById('bpOf').textContent=Math.round(of).toLocaleString('es-CL');
+  document.getElementById('bpVt').textContent=vt.toFixed(1);
+  document.getElementById('bpVl').textContent=(vl*100).toFixed(1)+'%';
+  document.getElementById('prcDrillTitle').textContent='Evolución — '+b;
+  const barD=(_ofP.ser[b]||[]);
+  const lineD=(_vtP.ser[b]||[]).map(v=>v/3);
+  mkCombo('cPrcDrill',_qs,barD,lineD,'Oferta '+b,'Venta/mes '+b);
+}
+
+// ── Proyectos filters ──
+function setProyFlt(btn){
+  document.querySelectorAll('#proyEstFlt .flt-btn[data-est]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); _proyFlt=btn.dataset.est; renderProyectos();
+}
+function setProyView(v,btn){
+  _proyView=v;
+  document.getElementById('btnViewProy').classList.toggle('active',v==='res');
+  document.getElementById('btnViewTip').classList.toggle('active',v==='tip');
+  renderProyectos();
+}
+
+// ── Comunas charts ──
+function renderComunas(){
+  const {stQ}=getCfg();
+  const sqn=qN(stQ);
+  const cqs=CM.quarters.filter(q=>qN(q)>=sqn);
+  const activeComs=[..._selComs].filter(c=>CM.comunas.includes(c));
+  const ds=(getter,vel)=>activeComs.map((com,i)=>({label:com.charAt(0)+com.slice(1).toLowerCase(),data:cqs.map(q=>getter(com,q)),borderColor:CC[i%CC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.8,pointRadius:1.2}));
+  mkComLine('cComOf',cqs,ds((com,q)=>CM.oferta[com]?.[q]||0));
+  mkComLine('cComVt',cqs,ds((com,q)=>(CM.venta[com]?.[q]||0)/3));
+  mkVelLn('cComVl',cqs,ds((com,q)=>{const o=CM.oferta[com]?.[q]||0,v=CM.venta[com]?.[q]||0;return o>0?(v/3)/o:0;}));
+}
+
+// ── Proyección defaults ──
+function fillProjComuna(){
+  const sel=document.getElementById('projComuna');
+  sel.innerHTML=CM.comunas.map(c=>'<option value="'+c+'">'+c.charAt(0)+c.slice(1).toLowerCase()+'</option>').join('');
+  sel.value='VITACURA';
+  updateProjDefaults();
+}
+function updateProjDefaults(){
+  const com=document.getElementById('projComuna').value;
+  if(!com||!CM.oferta[com])return;
+  const lastQ=CM.quarters[CM.quarters.length-1];
+  const stock=Math.round(CM.oferta[com]?.[lastQ]||0);
+  document.getElementById('projStock').value=stock;
+  // Estimate velocity from last 4 quarters
+  const last4=CM.quarters.slice(-4);
+  const avgOf=last4.reduce((s,q)=>s+(CM.oferta[com]?.[q]||0),0)/4;
+  const avgVt=last4.reduce((s,q)=>s+(CM.venta[com]?.[q]||0),0)/(4*3);
+  document.getElementById('projVel').value=(avgVt||0).toFixed(1);
+}
+
+// ── Proyección simulation ──
+function renderProyeccion(){
+  const stock0=+document.getElementById('projStock').value||0;
+  const vel=+document.getElementById('projVel').value||0;
+  const newPer=+document.getElementById('projNew').value||0;
+  const perm=+document.getElementById('projPerm').value||0;
+  const rate=(+document.getElementById('projRate').value||30)/100;
+  const N=+document.getElementById('projN').value||8;
+  const newFromPerm=(perm*rate)/4;
+  const totalNew=newPer+newFromPerm;
+
+  function sim(velFactor){
+    const v=vel*velFactor;
+    const s=[stock0];
+    const ql=['Actual'];
+    const lastQ=CM.quarters[CM.quarters.length-1];
+    const [lastN,lastT]=lastQ.split('T');
+    let qn=parseInt(lastN),yr=2000+parseInt(lastT.trim());
+    for(let i=0;i<N;i++){
+      qn++; if(qn>4){qn=1;yr++;}
+      ql.push(qn+'T '+String(yr).slice(2));
+      s.push(Math.max(0,s[s.length-1]-v*3+totalNew));
+    }
+    return {ql,s};
+  }
+  const base=sim(1), low=sim(0.8), high=sim(1.2);
+
+  // Main chart (base)
+  dk('cProj');
+  C['cProj']=new Chart(document.getElementById('cProj'),{type:'line',
+    data:{labels:base.ql,datasets:[
+      {label:'Escenario base',data:base.s,borderColor:'#1a3a6b',backgroundColor:'rgba(26,58,107,.08)',fill:true,tension:.3,borderWidth:2.5,pointRadius:3},
+      {label:'Conservador',data:low.s,borderColor:'#7b1c2e',backgroundColor:'transparent',borderDash:[5,3],tension:.3,borderWidth:1.5,pointRadius:2},
+      {label:'Optimista',data:high.s,borderColor:'#b8915a',backgroundColor:'transparent',borderDash:[3,2],tension:.3,borderWidth:1.5,pointRadius:2}
+    ]},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',font:{size:10}}}},
+      scales:{x:GX,y:{...GY,title:{display:true,text:'Stock (unidades)',color:'#8a9ab0'}}}}});
+
+  function mkScen(id,data,col){
+    dk(id);
+    C[id]=new Chart(document.getElementById(id),{type:'bar',
+      data:{labels:data.ql,datasets:[{label:'Stock',data:data.s,backgroundColor:col+'99',borderColor:col,borderWidth:1}]},
+      options:{responsive:true,plugins:{legend:{display:false}},scales:{x:GX,y:GY}}});
+  }
+  mkScen('cProjLow',low,'#7b1c2e');
+  mkScen('cProjMid',base,'#1a3a6b');
+  mkScen('cProjHigh',high,'#b8915a');
+}
+
+// ── Dashboard Proyectos (typologies) ──
+function getProyData(){
+  // Use PR if available, otherwise use RE
+  const src=PR||{projects:buildProjectsFromRE()};
+  return src.projects||[];
+}
+function buildProjectsFromRE(){
+  // Build project+tipología structure from existing RE.proyData
+  const projects=[];let cur=null;
+  RE.proyData.forEach(r=>{
+    const isSum=r[0]&&r[0]!=='—';
+    if(isSum){
+      cur={
+        fecha:r[0],id:r[1],propietario:r[2],edificio:r[3],direccion:r[4],
+        comuna:r[5],estado:r[6],fechaInicio:r[7],fechaEntrega:r[8],
+        ofertaTotal:r[9],pctVendido:r[10],velVenta:r[11],pisos:r[13],
+        disponibles:r[17],tipologias:[]
+      };
+      projects.push(cur);
+    } else if(cur&&r.some(v=>v!=='')){
+      cur.tipologias.push({dorm:r[15],banos:r[16],disponibles:r[17],supInt:r[18],supTer:r[19],supUtil:r[20],valorUF:r[21],ufm2:r[22]});
+    }
+  });
+  return projects;
+}
+function populateDashFilters(projects){
+  // Multi-project picker — only rebuild when project list changes
+  const key=projects.map(p=>p.edificio||p.id).join('|');
+  const picker=document.getElementById('dashProjPicker');
+  if(key!==_dashProjListKey){
+    _dashProjListKey=key;
+    picker.innerHTML='';
+    projects.forEach(p=>{
+      const nm=p.edificio||p.id||'Proyecto';
+      const lbl=document.createElement('label');
+      lbl.className='proj-check';lbl.title=nm+' ('+p.estado+')';
+      const chk=document.createElement('input');
+      chk.type='checkbox';chk.value=nm;
+      chk.checked=(_dashSelectedProjs===null||_dashSelectedProjs.has(nm));
+      chk.onchange=()=>{
+        if(_dashSelectedProjs===null){
+          // Primera deselección: construir set completo y quitar este
+          _dashSelectedProjs=new Set(projects.map(q=>q.edificio||q.id||'Proyecto'));
+        }
+        if(chk.checked)_dashSelectedProjs.add(nm); else _dashSelectedProjs.delete(nm);
+        dashUpdateCount(projects);renderDash();
+      };
+      lbl.appendChild(chk);lbl.appendChild(document.createTextNode(nm));
+      picker.appendChild(lbl);
+    });
+  } else {
+    // Solo actualizar estados
+    picker.querySelectorAll('input[type=checkbox]').forEach(chk=>{
+      chk.checked=(_dashSelectedProjs===null||_dashSelectedProjs.has(chk.value));
+    });
+  }
+  dashUpdateCount(projects);
+  // Comunas
+  const cSel=document.getElementById('dashComunaSel');
+  const ccur=cSel.value;
+  const allComs=[...new Set(projects.map(p=>p.comuna).filter(Boolean))].sort();
+  cSel.innerHTML='<option value="">Todas</option>'+allComs.map(c=>'<option'+(c===ccur?' selected':'')+'>'+c+'</option>').join('');
+  // Estado
+  const eSel=document.getElementById('dashEstSel');
+  const ecur=eSel.value;
+  eSel.innerHTML='<option value="">Todos</option>'+([ ...new Set(projects.map(p=>p.estado).filter(Boolean))].sort().map(e=>'<option'+(e===ecur?' selected':'')+'>'+e+'</option>').join(''));
+  // Dormitorios
+  const dSel=document.getElementById('dashDormSel');
+  const dcur=dSel.value;
+  const allDorm=[...new Set(projects.flatMap(p=>p.tipologias.map(t=>t.dorm)).filter(d=>d&&d!=='-'&&d!==''))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  dSel.innerHTML='<option value="">Todos</option>'+allDorm.map(d=>'<option'+(d===dcur?' selected':'')+'>'+d+'</option>').join('');
+}
+function dashUpdateCount(projects){
+  const total=projects.length;
+  const sel=_dashSelectedProjs===null?total:_dashSelectedProjs.size;
+  document.getElementById('dashProjCount').textContent=sel===total?'Todos los proyectos ('+total+')':(sel+' de '+total+' seleccionados');
+}
+function dashSelAll(all){
+  _dashSelectedProjs=all?null:new Set();
+  _dashProjListKey=''; // forzar rebuild checkboxes
+  renderDash();
+}
+function dashClearFlt(){
+  _dashSelectedProjs=null;_dashProjListKey='';
+  ['dashEstSel','dashComunaSel','dashDormSel'].forEach(id=>document.getElementById(id).value='');
+  ['dashSupMin','dashSupMax','dashTickMin','dashTickMax','dashUfm2Min','dashUfm2Max','dashVelMin'].forEach(id=>document.getElementById(id).value='');
+  renderDash();
+}
+function renderDash(){
+  const projects=getProyData();
+  if(!projects.length)return;
+  populateDashFilters(projects);
+
+  const estFlt=document.getElementById('dashEstSel').value;
+  const comunaFlt=document.getElementById('dashComunaSel').value;
+  const dormFlt=document.getElementById('dashDormSel').value;
+  const supMin=parseFloat(document.getElementById('dashSupMin').value)||0;
+  const supMax=parseFloat(document.getElementById('dashSupMax').value)||Infinity;
+  const tickMin=parseFloat(document.getElementById('dashTickMin').value)||0;
+  const tickMax=parseFloat(document.getElementById('dashTickMax').value)||Infinity;
+  const ufm2Min=parseFloat(document.getElementById('dashUfm2Min').value)||0;
+  const ufm2Max=parseFloat(document.getElementById('dashUfm2Max').value)||Infinity;
+  const velMin=+document.getElementById('dashVelMin').value||0;
+
+  // Filtrar proyectos
+  let filtered=projects.filter(p=>{
+    if(_dashSelectedProjs!==null&&!_dashSelectedProjs.has(p.edificio||p.id||'Proyecto'))return false;
+    if(estFlt&&p.estado!==estFlt)return false;
+    if(comunaFlt&&p.comuna!==comunaFlt)return false;
+    if(velMin>0&&(parseFloat(p.velVenta)||0)<velMin)return false;
+    return true;
+  });
+
+  // Filtrar tipologías con todos los rangos
+  const filteredTips=filtered.map(p=>({
+    ...p,
+    tipologias:p.tipologias.filter(t=>{
+      if(dormFlt&&String(t.dorm)!==dormFlt)return false;
+      const sup=parseFloat(t.supUtil)||0;
+      if(supMin>0&&sup<supMin)return false;
+      if(supMax<Infinity&&sup>supMax)return false;
+      const tick=parseFloat(t.valorUF)||0;
+      if(tickMin>0&&tick<tickMin)return false;
+      if(tickMax<Infinity&&tick>tickMax)return false;
+      const um2=parseFloat(t.ufm2)||0;
+      if(ufm2Min>0&&um2<ufm2Min)return false;
+      if(ufm2Max<Infinity&&um2>ufm2Max)return false;
+      return true;
+    })
+  })).filter(p=>p.tipologias.length>0||(!(dormFlt||supMin||supMax<Infinity||tickMin||tickMax<Infinity||ufm2Min||ufm2Max<Infinity)));
+
+  // KPIs
+  const totalTips=filteredTips.reduce((s,p)=>s+p.tipologias.length,0);
+  const totalDisp=filteredTips.reduce((s,p)=>s+p.tipologias.reduce((ss,t)=>ss+(parseFloat(t.disponibles)||0),0),0);
+  const allUF=filteredTips.flatMap(p=>p.tipologias.map(t=>parseFloat(t.valorUF)).filter(v=>!isNaN(v)&&v>0));
+  const allSup=filteredTips.flatMap(p=>p.tipologias.map(t=>parseFloat(t.supUtil)).filter(v=>!isNaN(v)&&v>0));
+  const allUfm2=filteredTips.flatMap(p=>p.tipologias.map(t=>parseFloat(t.ufm2)).filter(v=>!isNaN(v)&&v>0));
+  const avgUF=allUF.length?allUF.reduce((a,b)=>a+b,0)/allUF.length:0;
+  const avgSup=allSup.length?allSup.reduce((a,b)=>a+b,0)/allSup.length:0;
+  const avgUfm2=allUfm2.length?allUfm2.reduce((a,b)=>a+b,0)/allUfm2.length:0;
+  document.getElementById('dkPr').textContent=filteredTips.length;
+  document.getElementById('dkTip').textContent=totalTips;
+  document.getElementById('dkDisp').textContent=Math.round(totalDisp).toLocaleString('es-CL');
+  document.getElementById('dkAvgUF').textContent=avgUF>0?Math.round(avgUF).toLocaleString('es-CL'):'—';
+  document.getElementById('dkAvgSup').textContent=avgSup>0?avgSup.toFixed(1):'—';
+  document.getElementById('dkAvgUfm2').textContent=avgUfm2>0?Math.round(avgUfm2).toLocaleString('es-CL'):'—';
+
+  // Gráfico 1: Disponibles por dormitorios
+  const dormCounts={};
+  filteredTips.forEach(p=>p.tipologias.forEach(t=>{const k=t.dorm||'?';dormCounts[k]=(dormCounts[k]||0)+(parseFloat(t.disponibles)||0);}));
+  const dormK=Object.keys(dormCounts).sort((a,b)=>parseFloat(a)-parseFloat(b));
+  mkBar('cDashDorm',dormK.map(k=>k+' dorm.'),dormK.map(k=>dormCounts[k]),SC.slice(0,dormK.length),'Disponibles');
+
+  // Gráfico 2: Precio UF promedio por dormitorios
+  const ufByDorm={};
+  filteredTips.forEach(p=>p.tipologias.forEach(t=>{const k=t.dorm||'?',v=parseFloat(t.valorUF);if(!isNaN(v)&&v>0){ufByDorm[k]=ufByDorm[k]||[];ufByDorm[k].push(v);}}));
+  const ufK=Object.keys(ufByDorm).sort((a,b)=>parseFloat(a)-parseFloat(b));
+  mkBar('cDashUF',ufK.map(k=>k+' dorm.'),ufK.map(k=>Math.round(ufByDorm[k].reduce((s,v)=>s+v,0)/ufByDorm[k].length)),PC.slice(0,ufK.length),'UF promedio');
+
+  // Gráfico 3: Distribución superficie (histograma)
+  const bins=[40,60,80,100,120,150,180,220,300];
+  const bCnt=new Array(bins.length+1).fill(0);
+  filteredTips.forEach(p=>p.tipologias.forEach(t=>{
+    const s=parseFloat(t.supUtil);if(isNaN(s)||s<=0)return;
+    let b=bins.findIndex(v=>s<v);if(b<0)b=bins.length;
+    bCnt[b]+=(parseFloat(t.disponibles)||1);
+  }));
+  const bLbl=bins.map((v,i)=>(i===0?'<'+v:bins[i-1]+'–'+v)+' m²').concat(['≥'+bins[bins.length-1]+' m²']);
+  const bPairs=bLbl.map((l,i)=>({l,v:bCnt[i]})).filter(x=>x.v>0);
+  mkBar('cDashSup',bPairs.map(x=>x.l),bPairs.map(x=>x.v),SC.slice(0,bPairs.length),'Disponibles');
+
+  // Gráfico 4: UF/m² promedio por dormitorios
+  const um2ByD={};
+  filteredTips.forEach(p=>p.tipologias.forEach(t=>{const k=t.dorm||'?',v=parseFloat(t.ufm2);if(!isNaN(v)&&v>0){um2ByD[k]=um2ByD[k]||[];um2ByD[k].push(v);}}));
+  const um2K=Object.keys(um2ByD).sort((a,b)=>parseFloat(a)-parseFloat(b));
+  mkBar('cDashUfm2',um2K.map(k=>k+' dorm.'),um2K.map(k=>Math.round(um2ByD[k].reduce((s,v)=>s+v,0)/um2ByD[k].length)),PC.slice(0,um2K.length),'UF/m² prom.');
+
+  // Tabla
+  const tbl=document.getElementById('tbDash');
+  const hdrs=['Proyecto','Comuna','Estado','Dorm.','Baños','Sup. Útil m²','Precio UF','UF/m²','Disponibles'];
+  tbl.querySelector('thead').innerHTML='<tr>'+hdrs.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  const rows=[];
+  const ejecSet2=new Set(['FUNDACIONES','OBRA GRUESA','TERMINACIONES']);
+  filteredTips.forEach(p=>{
+    const u=String(p.estado||'').toUpperCase();
+    const bc=u.includes('TERMINADA')?'be-term':u.includes('SIN EJEC')?'be-sin':ejecSet2.has(u.trim())?'be-ejec':'be-otro';
+    rows.push('<tr style="background:rgba(26,58,107,.04);font-weight:600"><td colspan="9" style="font-size:.68rem;padding:.3rem .5rem">'+p.edificio+'&nbsp;<span class="badge-estado '+bc+'">'+p.estado+'</span>&nbsp;<span style="font-weight:400;color:var(--dim);font-size:.62rem">'+p.comuna+' · Entrega: '+(p.fechaEntrega||'—')+'</span></td></tr>');
+    p.tipologias.forEach(t=>{
+      rows.push('<tr class="tip-row"><td></td><td></td><td></td><td>'+(t.dorm||'—')+'</td><td>'+(t.banos||'—')+'</td><td>'+(t.supUtil||'—')+'</td><td>'+(t.valorUF?parseFloat(t.valorUF).toLocaleString('es-CL'):'—')+'</td><td>'+(t.ufm2||'—')+'</td><td>'+(t.disponibles||'—')+'</td></tr>');
+    });
+  });
+  tbl.querySelector('tbody').innerHTML=rows.join('');
+}
+
+// ── Proyectos Vitacura tab ──
+function setProyFlt(btn){
+  document.querySelectorAll('#proyEstFlt .flt-btn[data-est]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); _proyFlt=btn.dataset.est; renderProyectos();
+}
+function setProyView(v,btn){
+  _proyView=v;
+  document.getElementById('btnViewProy').classList.toggle('active',v==='res');
+  document.getElementById('btnViewTip').classList.toggle('active',v==='tip');
+  renderProyectos();
+}
+function renderProyectos(){
+  const all=RE.proyData.filter(r=>r[0]&&r[0]!=='—');
+  const ejecSet=new Set(['FUNDACIONES','OBRA GRUESA','TERMINACIONES']);
+  let rows=all;
+  if(_proyFlt==='ejec') rows=all.filter(r=>ejecSet.has(String(r[6]).toUpperCase().trim()));
+  else if(_proyFlt==='sin') rows=all.filter(r=>String(r[6]).toUpperCase().includes('SIN EJEC'));
+  else if(_proyFlt==='term') rows=all.filter(r=>String(r[6]).toUpperCase().includes('TERMINADA'));
+
+  // KPIs use col[17]=disponibles
+  let totDisp=0,totVnd=0,totVv=0,cntVnd=0,cntVv=0;
+  rows.forEach(r=>{
+    const disp=parseFloat(r[17]),vnd=parseFloat(r[10]),vv=parseFloat(r[11]);
+    if(!isNaN(disp))totDisp+=disp;
+    if(!isNaN(vnd)&&vnd>0){totVnd+=vnd;cntVnd++;}
+    if(!isNaN(vv)&&vv>0){totVv+=vv;cntVv++;}
+  });
+  document.getElementById('sPr').textContent=rows.length;
+  document.getElementById('sOf').textContent=Math.round(totDisp).toLocaleString('es-CL');
+  document.getElementById('sVnd').textContent=cntVnd>0?(totVnd/cntVnd).toFixed(1)+'%':'—';
+  document.getElementById('sVv').textContent=cntVv>0?totVv.toFixed(1):'—';
+
+  const tbl=document.getElementById('tbPr');
+  if(_proyView==='res'){
+    const selIdx=[3,2,6,8,9,17,10,11];
+    const selHdr=['Edificio','Propietario','Estado','Entrega','Tot. Proyecto','Disponibles','% Vendido','Vel. Venta'];
+    tbl.querySelector('thead').innerHTML='<tr>'+selHdr.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+    tbl.querySelector('tbody').innerHTML=rows.map(r=>{
+      const cells=selIdx.map((idx,i)=>{
+        const v=r[idx]??'—';
+        if(i===2){
+          const u=String(v).toUpperCase();
+          const bc=u.includes('TERMINADA')?'be-term':u.includes('SIN EJEC')?'be-sin':ejecSet.has(u.trim())?'be-ejec':'be-otro';
+          return '<td><span class="badge-estado '+bc+'">'+v+'</span></td>';
+        }
+        return '<td>'+(v===''||v===null?'—':v)+'</td>';
+      });
+      return '<tr>'+cells.join('')+'</tr>';
+    }).join('');
+  } else {
+    // With tipologías
+    const hdrs=['Edificio','Estado','Dorm.','Baños','Sup.Útil','Precio UF','UF/m²','Disponibles'];
+    tbl.querySelector('thead').innerHTML='<tr>'+hdrs.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+    const bodyRows=[];
+    // Build joined structure
+    const built=buildProjectsFromRE().filter(p=>{
+      if(_proyFlt==='ejec')return ejecSet.has(String(p.estado).toUpperCase().trim());
+      if(_proyFlt==='sin')return String(p.estado).toUpperCase().includes('SIN EJEC');
+      if(_proyFlt==='term')return String(p.estado).toUpperCase().includes('TERMINADA');
+      return true;
+    });
+    built.forEach(p=>{
+      const u=String(p.estado).toUpperCase();
+      const bc=u.includes('TERMINADA')?'be-term':u.includes('SIN EJEC')?'be-sin':ejecSet.has(u.trim())?'be-ejec':'be-otro';
+      bodyRows.push('<tr style="background:rgba(26,58,107,.04)"><td colspan="8" style="font-weight:600;font-size:.67rem;padding:.28rem .5rem">'+p.edificio+' <span class="badge-estado '+bc+'">'+p.estado+'</span></td></tr>');
+      if(p.tipologias.length===0){
+        bodyRows.push('<tr class="tip-row"><td colspan="8" style="color:var(--dim)">Sin tipologías</td></tr>');
+      } else {
+        p.tipologias.forEach(t=>{
+          bodyRows.push('<tr class="tip-row"><td></td><td></td><td>'+( t.dorm||'—')+'</td><td>'+(t.banos||'—')+'</td><td>'+(t.supUtil||'—')+'</td><td>'+(t.valorUF?parseFloat(t.valorUF).toLocaleString('es-CL'):'—')+'</td><td>'+(t.ufm2||'—')+'</td><td>'+(t.disponibles||'—')+'</td></tr>');
+        });
+      }
+    });
+    tbl.querySelector('tbody').innerHTML=bodyRows.join('');
+  }
+}
+
+// ── Main render ──
+function renderAll(){
+  const {sT,pT,stQ}=getCfg();
+  const sqn=qN(stQ);
+  _qs=AD.quarters.filter(q=>qN(q)>=sqn);
+
+  _ofS=agg(AD.oferta.bySup,_qs,sT,'s');
+  _vtS=agg(AD.venta.bySup, _qs,sT,'s');
+  _ofP=agg(AD.oferta.byPrec,_qs,pT,'p');
+  _vtP=agg(AD.venta.byPrec, _qs,pT,'p');
+
+  const sm=(ser,lbls,i)=>lbls.reduce((s,b)=>s+(ser[b][i]||0),0);
+  const toS=_qs.map((_,i)=>sm(_ofS.ser,_ofS.lbls,i));
+  const tvS=_qs.map((_,i)=>sm(_vtS.ser,_vtS.lbls,i));
+  const toP=_qs.map((_,i)=>sm(_ofP.ser,_ofP.lbls,i));
+  const tvP=_qs.map((_,i)=>sm(_vtP.ser,_vtP.lbls,i));
+  const vlS=toS.map((o,i)=>o>0?(tvS[i]/3)/o:0);
+  const vlP=toP.map((o,i)=>o>0?(tvP[i]/3)/o:0);
+
+  renderEvo();
+
+  // Sup
+  mkSt('cSOf',_qs,_ofS.lbls,_ofS.ser,SC,'Unidades');
+  const vtSm={};_ofS.lbls.forEach(b=>vtSm[b]=_vtS.ser[b].map(v=>v/3));
+  mkSt('cSVt',_qs,_ofS.lbls,vtSm,SC,'Unidades/mes');
+  mkVelLn('cSVl',_qs,[
+    {label:'Total',data:vlS,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},
+    ..._ofS.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofS.ser[b][qi]>0?(_vtS.ser[b][qi]/3)/_ofS.ser[b][qi]:0),borderColor:SC[i%SC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))
+  ]);
+
+  // Prec
+  const vtPmes={};_ofP.lbls.forEach(b=>vtPmes[b]=_vtP.ser[b].map(v=>v/3));
+  mkSt('cPOf',_qs,_ofP.lbls,_ofP.ser,PC,'Unidades');
+  mkSt('cPVt',_qs,_ofP.lbls,vtPmes,PC,'Unidades/mes');
+  mkVelLn('cPVl',_qs,[
+    {label:'Total',data:vlP,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},
+    ..._ofP.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofP.ser[b][qi]>0?(_vtP.ser[b][qi]/3)/_ofP.ser[b][qi]:0),borderColor:PC[i%PC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))
+  ]);
+
+  // Snapshot
+  const ss=RE.supSnap.data;if(ss.length)mkGr('cSSn',ss.map(d=>d.label),ss.map(d=>d.oferta),ss.map(d=>d.venta));
+  const ps=RE.precSnap.data;if(ps.length)mkGr('cPSn',ps.map(d=>d.label),ps.map(d=>d.oferta),ps.map(d=>d.venta));
+
+  // Comunas
+  renderComunas();
+
+  // KPIs
+  const lOf=toS[toS.length-1]||0,lVt=(tvS[tvS.length-1]||0)/3,lVl=vlS[vlS.length-1]||0;
+  document.getElementById('kOf').textContent=Math.round(lOf).toLocaleString('es-CL');
+  document.getElementById('kVt').textContent=lVt.toFixed(1);
+  document.getElementById('kVl').textContent=(lVl*100).toFixed(1)+'%';
+  document.getElementById('kPr').textContent=RE.proyData.filter(r=>r[0]&&r[0]!=='—').length;
+  if(RE.period)document.getElementById('periodBadge').textContent=RE.period;
+  document.getElementById('dataSrc').textContent='GFK Adimark · GfK Reporte — '+(_qs[0]||'')+' – '+(_qs[_qs.length-1]||'');
+
+  fillBandSelects();
+  updateSupDrill();
+  updatePrcDrill();
+  renderProyectos();
+  renderDash();
+  rTbl('tbPe',RE.permHeaders,RE.permData);
+  upPrev();
+}
+
+function rTbl(id,hdr,rows){
+  if(!hdr||!hdr.length)return;
+  const t=document.getElementById(id);
+  t.querySelector('thead').innerHTML='<tr>'+hdr.map(h=>'<th>'+h+'</th>').join('')+'</tr>';
+  t.querySelector('tbody').innerHTML=rows.map(r=>'<tr>'+r.map(c=>'<td>'+(c||'—')+'</td>').join('')+'</tr>').join('');
+}
+
+// ── Parse uploaded GFK Adimark ──
+function parseAdimark(wb){
+  function rows(n){return XLSX.utils.sheet_to_json(wb.Sheets[n]||{},{header:1,defval:''});}
+  const vR=rows('Venta Trimestral (Unid)'),oR=rows('Oferta Disponible (Unid)');
+  const hdrs=vR[1]||[];const qC=[];
+  for(let c=6;c<hdrs.length;c++){const h=String(hdrs[c]).trim();if(/\dT\s+\d{2}/.test(h))qC.push({c,label:h.replace(/\s+/,' ')});}
+  function ext(dr){
+    const bySup={},byPrec={};
+    for(let r=2;r<dr.length;r++){
+      const row=dr[r];
+      if(String(row[1]).trim().toUpperCase()!=='DEPARTAMENTOS')continue;
+      if(String(row[2]).trim().toUpperCase()!=='VITACURA')continue;
+      const sup=String(row[4]).trim(),prec=String(row[5]).trim();
+      for(const {c,label} of qC){
+        const raw=row[c];if(raw===''||raw===null)continue;
+        const v=parseFloat(raw);if(isNaN(v)||v===0)continue;
+        bySup[label]=bySup[label]||{};byPrec[label]=byPrec[label]||{};
+        bySup[label][sup]=(bySup[label][sup]||0)+v;
+        byPrec[label][prec]=(byPrec[label][prec]||0)+v;
+      }
+    }
+    return {bySup,byPrec};
+  }
+  return {quarters:qC.map(q=>q.label),venta:ext(vR),oferta:ext(oR)};
+}
+
+// ── Parse uploaded GfK Reporte ──
+function parseReporte(wb){
+  function sR(p){const n=wb.SheetNames.find(x=>x.includes(p));return n?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}):[]; }
+  function snap(rows){
+    let period='';const data=[];
+    for(const r of rows){const lbl=String(r[1]||'').trim();if(/Trimestre|trimestre/.test(lbl)){period=lbl;continue;}const of=parseFloat(r[2]),vt=parseFloat(r[3]);if(!isNaN(of)&&lbl)data.push({label:lbl,oferta:of,venta:vt});}
+    return {period,data};
+  }
+  const supSnap=snap(sR('Superficie')),precSnap=snap(sR('Precio'));
+  const period=supSnap.period||precSnap.period||RE.period;
+  const pR=sR('Proyectos');let pH=[],pD=[];
+  for(let r=0;r<pR.length;r++){
+    const flat=pR[r].map(c=>String(c).trim());
+    if(flat.filter(Boolean).length>=4&&flat.some(c=>c.toLowerCase().includes('fecha'))&&flat.some(c=>c==='ID'||c.includes('Propietario'))){
+      pH=flat.slice(1).filter(Boolean);
+      for(let r2=r+1;r2<pR.length;r2++){const d=pR[r2];if(d.some(v=>v!==''))pD.push(d.slice(1,1+pH.length));}break;
+    }
+  }
+  const peR=sR('Permiso');let peH=[],peD=[];
+  for(let r=0;r<peR.length;r++){
+    const flat=peR[r].map(c=>String(c).trim());
+    if(flat.filter(Boolean).length>=3&&flat.some(c=>c==='Mes'||c.includes('Direcci'))){
+      peH=flat.slice(1).filter(Boolean);
+      for(let r2=r+1;r2<peR.length;r2++){const d=peR[r2];if(d.some(v=>v!==''))peD.push(d.slice(1,1+peH.length));}break;
+    }
+  }
+  return {supSnap,precSnap,period,proyHeaders:pH,proyData:pD,permHeaders:peH,permData:peD};
+}
+
+// ── Parse Reporte Proyectos (3rd file — multi-commune, typology detail) ──
+function parseProyReport(wb){
+  function sR(p){const n=wb.SheetNames.find(x=>x.includes(p));return n?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}):[]; }
+  const raw=sR('Proyectos');
+  let hdrRow=-1;
+  for(let r=0;r<raw.length;r++){
+    const flat=raw[r].map(c=>String(c).trim());
+    if(flat.filter(Boolean).length>=4&&flat.some(c=>c.toLowerCase().includes('fecha'))&&flat.some(c=>c==='ID'||c.includes('Propietario'))){hdrRow=r;break;}
+  }
+  if(hdrRow<0)return null;
+  const hdrs=raw[hdrRow].map(c=>String(c).trim());
+  const projects=[];let curProj=null;
+  for(let r=hdrRow+1;r<raw.length;r++){
+    const row=raw[r];
+    if(!row.some(v=>v!==''))continue;
+    const isSum=row[0]&&row[0]!==''&&row[0]!=='—';
+    if(isSum){
+      curProj={fecha:row[0],id:row[1],propietario:row[2],edificio:row[3],direccion:row[4],comuna:row[5],estado:row[6],fechaInicio:row[7],fechaEntrega:row[8],ofertaTotal:row[9],pctVendido:row[10],velVenta:row[11],pisos:row[13],disponibles:row[17],tipologias:[]};
+      projects.push(curProj);
+    } else if(curProj){
+      curProj.tipologias.push({dorm:row[15],banos:row[16],disponibles:row[17],supInt:row[18],supTer:row[19],supUtil:row[20],valorUF:row[21],ufm2:row[22]});
+    }
+  }
+  return {projects,headers:hdrs};
+}
+
+// ── Filtro global superficie ──
+function applyGlobalSup(){
+  const mn=document.getElementById('gSupMin').value;
+  const mx=document.getElementById('gSupMax').value;
+  // Sync a Dashboard Proy.
+  document.getElementById('dashSupMin').value=mn;
+  document.getElementById('dashSupMax').value=mx;
+  // Sincronizar selección de banda en Por Superficie
+  const {sT}=getCfg();
+  const lbls=bLbls(sT,'s');
+  const mnV=parseFloat(mn)||0, mxV=parseFloat(mx)||Infinity;
+  let bestBand='';
+  if(mn||mx){
+    lbls.forEach(l=>{
+      const m1=l.match(/(\d[\d.]*)–(\d[\d.]*)/);
+      if(m1){const lo=parseFloat(m1[1]),hi=parseFloat(m1[2]);if(lo>=mnV&&hi<=mxV)bestBand=l;}
+      const m2=l.match(/< (\d+)/);if(m2&&mnV===0&&parseFloat(m2[1])>=mxV)bestBand=l;
+    });
+  }
+  document.getElementById('selSupBand').value=bestBand;
+  updateSupDrill();
+  renderDash();
+}
+
+// ── Init ──
+fillQ();
+buildEvoDdl();
+buildComFlt();
+fillProjComuna();
+upPrev();
+renderAll();
+</script>
+</body>
+</html>

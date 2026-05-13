@@ -1,0 +1,11 @@
+# Archivos fuente pesados (datos crudos)
+GFK Adimark - Series Historicas por Comunas y Tipologias 1T 2026.xls
+20240425 Graficos Presentacion Inversionista.xlsx
+
+# Artefactos intermedios de build
+preloaded_combined.js
+preloaded_data.json
+
+# Python
+__pycache__/
+*.pyc
