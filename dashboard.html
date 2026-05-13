@@ -183,11 +183,15 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
         <span class="flt-lbl">Comuna</span>
         <select class="flt-sel" id="evoComuna" style="max-width:200px" onchange="renderEvo()"></select>
         <span class="flt-lbl" style="margin-left:.25rem">Tipo</span>
-        <select class="flt-sel" id="evoTipo"><option>Departamentos</option></select>
-        <span class="flt-note">Desglose precio UF disponible solo Vitacura</span>
+        <select class="flt-sel" id="evoTipo" onchange="renderEvo()">
+          <option value="DEPARTAMENTO">Departamentos</option>
+          <option value="CASA">Casas</option>
+          <option value="">Todos</option>
+        </select>
+        <span class="flt-note" id="evoNote">Historial Adimark disponible solo Vitacura · Departamentos</span>
       </div>
       <div class="cw">
-        <div class="ct" id="ctEvoLabel">Evolución Oferta &amp; Venta</div>
+        <div class="ct" id="ctEvoLabel">Evolución Oferta &amp; Venta · Historial Adimark</div>
         <canvas id="cEvo" height="72"></canvas>
       </div>
       <div class="two-col">
@@ -196,6 +200,28 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
           <div class="ct">Venta por Rango de Precio (UF) · Vitacura</div>
           <canvas id="cEvoP" height="110"></canvas>
           <div id="cEvoPMsg" style="display:none;padding:1.4rem;text-align:center;color:var(--dim);font-size:.72rem">Desglose por precio solo disponible para <strong>Vitacura</strong></div>
+        </div>
+      </div>
+      <!-- ── Base de Proyectos section (muestra cuando BP cargado) ── -->
+      <div id="cwBP" style="display:none;margin-top:.74rem">
+        <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:.52rem 0 .46rem;display:flex;align-items:center;gap:.3rem">
+          <span style="display:inline-block;width:3px;height:.82em;background:var(--gold);border-radius:2px"></span>
+          Base de Proyectos 1T 2026 —&nbsp;<span id="bpLabel" style="color:var(--navy)">Todos</span>
+        </div>
+        <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:.62rem">
+          <div class="kpi"><div class="kpi-val" id="bpKpiOfe">—</div><div class="kpi-lbl">Oferta Total</div></div>
+          <div class="kpi"><div class="kpi-val" id="bpKpiDisp">—</div><div class="kpi-lbl">Disponible</div></div>
+          <div class="kpi"><div class="kpi-val" id="bpKpiVta">—</div><div class="kpi-lbl">Venta / mes</div></div>
+          <div class="kpi"><div class="kpi-val" id="bpKpiVvta">—</div><div class="kpi-lbl">% Vend. Prom.</div></div>
+          <div class="kpi"><div class="kpi-val" id="bpKpiN">—</div><div class="kpi-lbl">N° Proyectos</div></div>
+        </div>
+        <div class="two-col">
+          <div class="cw"><div class="ct">Proyectos por Banda de % Vendido</div><canvas id="cBpN" height="110"></canvas></div>
+          <div class="cw"><div class="ct">Unidades Disponibles por Banda de % Vendido</div><canvas id="cBpDisp" height="110"></canvas></div>
+        </div>
+        <div class="two-col">
+          <div class="cw"><div class="ct">Precio Promedio (UF mín) por Banda de Avance</div><canvas id="cBpPrec" height="110"></canvas></div>
+          <div class="cw"><div class="ct">UF/m² Promedio por Banda de Avance</div><canvas id="cBpUfm2" height="110"></canvas></div>
         </div>
       </div>
     </div>
@@ -468,6 +494,15 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
     <button class="btn-act" id="btnPR" onclick="doPR()" disabled style="margin-top:.32rem">Cargar proyectos</button>
     <div class="upload-note">Mismo formato GfK · Multi-comunas</div>
   </div>
+  <!-- Upload 4: Base de Proyectos -->
+  <div class="sb-sec">
+    <div class="sb-ttl">Base de Proyectos</div>
+    <div class="uz" id="z4" onclick="document.getElementById('f4').click()" ondragover="zev(event,'z4',1)" ondragleave="zev(event,'z4',0)" ondrop="zdrop(event,'b')">
+      <div class="uz-icon">📊</div><div class="uz-name">GFK Base Proyectos</div><div class="uz-sub">Base Proyectos 1T (.xls)</div>
+    </div>
+    <input type="file" id="f4" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'b')">
+    <div class="upload-note">Actualiza sección Base en tab Evolución</div>
+  </div>
   <!-- Band config -->
   <div class="sb-sec">
     <div class="sb-ttl">Rangos de Análisis</div>
@@ -508,7 +543,7 @@ const PRELOADED_COMUNAS={"quarters":["1T 02","2T 02","3T 02","4T 02","1T 03","2T
 </script>
 <script>
 let AD=PRELOADED_ADIMARK, RE=PRELOADED_REPORTE, CM=PRELOADED_COMUNAS;
-let pA=null,pR=null,pPR=null,PR=null;
+let pA=null,pR=null,pPR=null,PR=null,pBP=null,BP=null;
 const C={};
 let _ofS=null,_vtS=null,_ofP=null,_vtP=null,_qs=[];
 let _proyFlt='todos',_proyView='res';
@@ -518,7 +553,7 @@ let _dashProjListKey=''; // para detectar cambio de lista
 
 // ── Upload / file handling ──
 function zev(e,id,on){e.preventDefault();document.getElementById(id).classList.toggle('over',!!on);}
-function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','p':'z3'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
+function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','p':'z3','b':'z4'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
 function hFile(e,t){if(e.target.files[0])pFile(e.target.files[0],t);}
 function progBar(pct){
   const b=document.getElementById('gProgBar');if(!b)return;
@@ -530,7 +565,7 @@ function showZLoad(zid,name){
   z.innerHTML='<div class="uz-spin"></div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">Procesando…</div>';
 }
 function pFile(file,type){
-  const zmap={a:'z1',r:'z2',p:'z3'};
+  const zmap={a:'z1',r:'z2',p:'z3',b:'z4'};
   showZLoad(zmap[type],file.name);
   progBar(25);
   const rd=new FileReader();
@@ -557,7 +592,15 @@ function pFile(file,type){
             zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">'+file.name+'</div><div class="uz-sub">Sin hoja Proyectos — clic para reintentar</div>';
           }
         }
-        if(type!=='p')chkReady();
+        else if(type==='b'){
+          const parsed=parseBP(wb);
+          if(parsed){BP=parsed;markZ('z4',file.name);renderEvoBP();}
+          else{
+            const zz=document.getElementById('z4');zz.classList.remove('ok');
+            zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">'+file.name+'</div><div class="uz-sub">Sin hoja Base Proyectos</div>';
+          }
+        }
+        if(type!=='p'&&type!=='b')chkReady();
       }catch(e){
         const zz=document.getElementById(zmap[type]);zz.classList.remove('ok');
         zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">Error al leer</div><div class="uz-sub">'+(e.message||'').slice(0,50)+'</div>';
@@ -570,7 +613,7 @@ function pFile(file,type){
 function markZ(id,name){
   const z=document.getElementById(id);z.classList.add('ok');
   z.innerHTML='<div style="color:var(--navy2);font-size:1rem">✔</div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">listo — clic para cambiar</div>';
-  const map={'z1':'f1','z2':'f2','z3':'f3'};
+  const map={'z1':'f1','z2':'f2','z3':'f3','z4':'f4'};
   z.onclick=()=>document.getElementById(map[id]).click();
 }
 function chkReady(){
@@ -779,6 +822,7 @@ function renderEvo(){
     document.getElementById('cEvoPMsg').style.display='block';
     document.getElementById('cwEvoP').style.display='block';
   }
+  renderEvoBP();
 }
 
 // ── Superficie drill ──
@@ -1264,6 +1308,28 @@ function rTbl(id,hdr,rows){
   t.querySelector('tbody').innerHTML=rows.map(r=>'<tr>'+r.map(c=>'<td>'+(c||'—')+'</td>').join('')+'</tr>').join('');
 }
 
+// ── Parse GFK Base de Proyectos ──
+function parseBP(wb){
+  const name=wb.SheetNames.find(n=>/base|proyect/i.test(n));
+  if(!name)return null;
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,defval:''});
+  if(rows.length<2)return null;
+  const projects=rows.slice(1).map(r=>{
+    if(!r[0]&&!r[2])return null;
+    return {
+      id:String(r[0]),tpo:String(r[1]).trim().toUpperCase(),
+      comuna:String(r[2]).trim().toUpperCase(),
+      nombre:String(r[3]).trim(),inmobiliaria:String(r[5]).trim(),
+      disponible:parseFloat(r[9])||0,ofe:parseFloat(r[10])||0,
+      vvta:parseFloat(r[11])||0,vta:parseFloat(r[13])||0,
+      precioMin:parseFloat(r[15])||0,precioMax:parseFloat(r[16])||0,
+      minMtu:parseFloat(r[17])||0,maxMtu:parseFloat(r[18])||0,
+      estado:String(r[19]).trim(),valorUfm2:parseFloat(r[27])||0
+    };
+  }).filter(p=>p&&p.comuna&&p.tpo);
+  return projects.length?{projects}:null;
+}
+
 // ── Parse uploaded GFK Adimark ──
 function parseAdimark(wb){
   function rows(n){return XLSX.utils.sheet_to_json(wb.Sheets[n]||{},{header:1,defval:''});}
@@ -1364,6 +1430,47 @@ function parseProyReport(wb){
     }
   }
   return projects.length?{projects,headers:hdrs}:null;
+}
+
+// ── Base de Proyectos — render section in Evolución tab ──
+function renderEvoBP(){
+  const cwBP=document.getElementById('cwBP');
+  if(!BP){cwBP.style.display='none';return;}
+  const com=document.getElementById('evoComuna').value||'VITACURA';
+  const tpo=document.getElementById('evoTipo').value;
+  let projs=BP.projects.filter(p=>p.comuna===com);
+  if(tpo)projs=projs.filter(p=>p.tpo===tpo);
+  if(!projs.length){cwBP.style.display='none';return;}
+  cwBP.style.display='block';
+  const tpoLbl=tpo==='DEPARTAMENTO'?'Departamentos':tpo==='CASA'?'Casas':'Todos (Depto+Casa)';
+  document.getElementById('bpLabel').textContent=com.charAt(0)+com.slice(1).toLowerCase()+' · '+tpoLbl;
+  const totalOfe=projs.reduce((s,p)=>s+p.ofe,0);
+  const totalDisp=projs.reduce((s,p)=>s+p.disponible,0);
+  const totalVta=projs.reduce((s,p)=>s+p.vta,0);
+  const avgVvta=projs.reduce((s,p)=>s+p.vvta,0)/projs.length;
+  document.getElementById('bpKpiOfe').textContent=Math.round(totalOfe).toLocaleString('es-CL');
+  document.getElementById('bpKpiDisp').textContent=Math.round(totalDisp).toLocaleString('es-CL');
+  document.getElementById('bpKpiVta').textContent=totalVta.toFixed(1);
+  document.getElementById('bpKpiVvta').textContent=avgVvta.toFixed(1)+'%';
+  document.getElementById('bpKpiN').textContent=projs.length;
+  // Bandas 0-10%,...,90-100%
+  const bLbls2=['0-10%','10-20%','20-30%','30-40%','40-50%','50-60%','60-70%','70-80%','80-90%','90-100%'];
+  const bN=new Array(10).fill(0),bDisp=new Array(10).fill(0);
+  const bPrec=Array.from({length:10},()=>[]),bUfm2=Array.from({length:10},()=>[]);
+  projs.forEach(p=>{
+    const bi=Math.min(9,Math.floor(p.vvta/10));
+    bN[bi]++;bDisp[bi]+=p.disponible;
+    if(p.precioMin>0)bPrec[bi].push(p.precioMin);
+    if(p.valorUfm2>0)bUfm2[bi].push(p.valorUfm2);
+  });
+  const avgPrec=bPrec.map(a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):0);
+  const avgUfm2b=bUfm2.map(a=>a.length?Math.round(a.reduce((s,v)=>s+v,0)/a.length):0);
+  // Color de avance: azul oscuro (poco vendido) → dorado → borgoña (casi agotado)
+  const bCol=['#1a3a6b','#1e5296','#2563a8','#5b8bb5','#b8915a','#c9a06a','#a0293d','#8b1e30','#7b1c2e','#5a0f22'];
+  mkBar('cBpN',bLbls2,bN,bCol,'N° proyectos');
+  mkBar('cBpDisp',bLbls2,bDisp,bCol,'Unidades disp.');
+  mkBar('cBpPrec',bLbls2,avgPrec,bCol,'UF mín prom.');
+  mkBar('cBpUfm2',bLbls2,avgUfm2b,bCol,'UF/m² prom.');
 }
 
 // ── Filtro global superficie ──
