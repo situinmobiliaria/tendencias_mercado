@@ -119,6 +119,11 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
 .proj-check input[type=checkbox]{accent-color:var(--navy);width:12px;height:12px;cursor:pointer;flex-shrink:0}
 .proj-sel-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:.22rem}
 .proj-sel-count{font-size:.59rem;color:var(--dim);font-style:italic}
+/* Loading spinner en zona de carga */
+.uz-spin{width:20px;height:20px;border:2.5px solid var(--brd2);border-top-color:var(--navy);border-radius:50%;animation:uz-rot .65s linear infinite;margin:.08rem auto .2rem}
+@keyframes uz-rot{to{transform:rotate(360deg)}}
+/* Barra de progreso global */
+#gProgBar{position:fixed;top:0;left:0;height:3px;background:var(--navy2);z-index:9999;width:0%;transition:width .22s ease;pointer-events:none}
 .proj-sel-actions{display:flex;gap:.3rem}
 .proj-sel-actions button{font-size:.58rem;padding:.06rem .3rem;border:1px solid var(--brd);border-radius:3px;background:var(--white);color:var(--mid);cursor:pointer}
 .proj-sel-actions button:hover{border-color:var(--navy);color:var(--navy)}
@@ -493,6 +498,7 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
 </div><!-- /sidebar -->
 </div><!-- /body-row -->
 </div><!-- /shell -->
+<div id="gProgBar"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
@@ -514,14 +520,50 @@ let _dashProjListKey=''; // para detectar cambio de lista
 function zev(e,id,on){e.preventDefault();document.getElementById(id).classList.toggle('over',!!on);}
 function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','p':'z3'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
 function hFile(e,t){if(e.target.files[0])pFile(e.target.files[0],t);}
+function progBar(pct){
+  const b=document.getElementById('gProgBar');if(!b)return;
+  if(pct===0){b.style.width='100%';setTimeout(()=>{b.style.display='none';b.style.width='0%';},280);}
+  else{b.style.display='block';b.style.width=pct+'%';}
+}
+function showZLoad(zid,name){
+  const z=document.getElementById(zid);z.classList.remove('ok','over');
+  z.innerHTML='<div class="uz-spin"></div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">Procesando…</div>';
+}
 function pFile(file,type){
+  const zmap={a:'z1',r:'z2',p:'z3'};
+  showZLoad(zmap[type],file.name);
+  progBar(25);
   const rd=new FileReader();
   rd.onload=ev=>{
-    const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
-    if(type==='a'){pA=parseAdimark(wb);markZ('z1',file.name);}
-    else if(type==='r'){pR=parseReporte(wb);markZ('z2',file.name);}
-    else if(type==='p'){pPR=parseProyReport(wb);markZ('z3',file.name);document.getElementById('btnPR').disabled=false;}
-    if(type!=='p')chkReady();
+    progBar(55);
+    setTimeout(()=>{
+      try{
+        const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
+        if(type==='a'){pA=parseAdimark(wb);markZ('z1',file.name);}
+        else if(type==='r'){pR=parseReporte(wb);markZ('z2',file.name);}
+        else if(type==='p'){
+          let parsed=parseProyReport(wb);
+          if(!parsed){
+            // Fallback: mismo formato GfK Reporte estándar
+            const re=parseReporte(wb);
+            if(re&&re.proyData&&re.proyData.length){
+              parsed={projects:buildProjectsFromData(re.proyData),headers:[]};
+            }
+          }
+          pPR=parsed;
+          if(parsed){markZ('z3',file.name);document.getElementById('btnPR').disabled=false;}
+          else{
+            const zz=document.getElementById('z3');zz.classList.remove('ok');
+            zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">'+file.name+'</div><div class="uz-sub">Sin hoja Proyectos — clic para reintentar</div>';
+          }
+        }
+        if(type!=='p')chkReady();
+      }catch(e){
+        const zz=document.getElementById(zmap[type]);zz.classList.remove('ok');
+        zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">Error al leer</div><div class="uz-sub">'+(e.message||'').slice(0,50)+'</div>';
+      }
+      progBar(0);
+    },10);
   };
   rd.readAsArrayBuffer(file);
 }
@@ -548,7 +590,8 @@ function doUpdate(){
 function doPR(){
   if(pPR){PR=pPR;pPR=null;}
   document.getElementById('btnPR').disabled=true;
-  renderDash();
+  progBar(40);
+  setTimeout(()=>{renderDash();progBar(0);},10);
 }
 function resetZ(zid,fid,name,sub){
   const z=document.getElementById(zid);z.classList.remove('ok');
@@ -884,18 +927,15 @@ function getProyData(){
   const src=PR||{projects:buildProjectsFromRE()};
   return src.projects||[];
 }
-function buildProjectsFromRE(){
-  // Build project+tipología structure from existing RE.proyData
+function buildProjectsFromData(proyData){
   const projects=[];let cur=null;
-  RE.proyData.forEach(r=>{
+  proyData.forEach(r=>{
     const isSum=r[0]&&r[0]!=='—';
     if(isSum){
-      cur={
-        fecha:r[0],id:r[1],propietario:r[2],edificio:r[3],direccion:r[4],
+      cur={fecha:r[0],id:r[1],propietario:r[2],edificio:r[3],direccion:r[4],
         comuna:r[5],estado:r[6],fechaInicio:r[7],fechaEntrega:r[8],
         ofertaTotal:r[9],pctVendido:r[10],velVenta:r[11],pisos:r[13],
-        disponibles:r[17],tipologias:[]
-      };
+        disponibles:r[17],tipologias:[]};
       projects.push(cur);
     } else if(cur&&r.some(v=>v!=='')){
       cur.tipologias.push({dorm:r[15],banos:r[16],disponibles:r[17],supInt:r[18],supTer:r[19],supUtil:r[20],valorUF:r[21],ufm2:r[22]});
@@ -903,6 +943,10 @@ function buildProjectsFromRE(){
   });
   return projects;
 }
+function buildProjectsFromRE(){
+  return buildProjectsFromData(RE.proyData);
+}
+
 function populateDashFilters(projects){
   // Multi-project picker — only rebuild when project list changes
   const key=projects.map(p=>p.edificio||p.id).join('|');
@@ -1279,26 +1323,47 @@ function parseReporte(wb){
 function parseProyReport(wb){
   function sR(p){const n=wb.SheetNames.find(x=>x.includes(p));return n?XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:''}):[]; }
   const raw=sR('Proyectos');
+  if(!raw.length)return null;
   let hdrRow=-1;
-  for(let r=0;r<raw.length;r++){
+  for(let r=0;r<Math.min(raw.length,25);r++){
     const flat=raw[r].map(c=>String(c).trim());
     if(flat.filter(Boolean).length>=4&&flat.some(c=>c.toLowerCase().includes('fecha'))&&flat.some(c=>c==='ID'||c.includes('Propietario'))){hdrRow=r;break;}
   }
   if(hdrRow<0)return null;
   const hdrs=raw[hdrRow].map(c=>String(c).trim());
+  // Detectar columnas por nombre de header (robusto a offset de columna A en blanco)
+  function ci(terms){
+    for(const t of terms){const i=hdrs.findIndex(h=>h.toLowerCase()===t.toLowerCase());if(i>=0)return i;}
+    for(const t of terms){const i=hdrs.findIndex(h=>h.toLowerCase().includes(t.toLowerCase()));if(i>=0)return i;}
+    return -1;
+  }
+  const iF=ci(['fecha']),iId=ci(['id']),iProp=ci(['propietario']),iEdif=ci(['edificio','nombre']),iDir=ci(['dirección','direccion']);
+  const iCom=ci(['comuna']),iEst=ci(['estado']),iFI=ci(['inicio']),iFE=ci(['entrega']);
+  const iOT=ci(['oferta total','total']),iPV=ci(['%vendido','% vendido','vendido']),iVV=ci(['vel','velocidad']);
+  const iPisos=ci(['pisos','piso']),iDisp=ci(['disponible']);
+  const iDorm=ci(['dorm']),iBan=ci(['baño','bano']),iSI=ci(['sup int','superficie int','int']),iST=ci(['terr','terraza']);
+  const iSU=ci(['sup util','sup. util','util','útil']),iUF=ci(['valor uf','precio uf','valor','precio']),iUM2=ci(['uf/m2','uf/m²','uf/m']);
+  // G(row,i,fb): usa columna detectada por header; si no encontrada, usa fallback hardcodeado
+  const G=(row,i,fb)=>(i>=0&&i<row.length)?row[i]:row[fb];
   const projects=[];let curProj=null;
   for(let r=hdrRow+1;r<raw.length;r++){
     const row=raw[r];
-    if(!row.some(v=>v!==''))continue;
-    const isSum=row[0]&&row[0]!==''&&row[0]!=='—';
+    if(row.every(v=>v===''))continue;
+    const firstVal=String(G(row,iF,0)||'').trim();
+    const isSum=firstVal&&firstVal!=='—';
     if(isSum){
-      curProj={fecha:row[0],id:row[1],propietario:row[2],edificio:row[3],direccion:row[4],comuna:row[5],estado:row[6],fechaInicio:row[7],fechaEntrega:row[8],ofertaTotal:row[9],pctVendido:row[10],velVenta:row[11],pisos:row[13],disponibles:row[17],tipologias:[]};
+      curProj={fecha:G(row,iF,0),id:G(row,iId,1),propietario:G(row,iProp,2),edificio:G(row,iEdif,3),
+        direccion:G(row,iDir,4),comuna:G(row,iCom,5),estado:G(row,iEst,6),
+        fechaInicio:G(row,iFI,7),fechaEntrega:G(row,iFE,8),ofertaTotal:G(row,iOT,9),
+        pctVendido:G(row,iPV,10),velVenta:G(row,iVV,11),pisos:G(row,iPisos,13),
+        disponibles:G(row,iDisp,17),tipologias:[]};
       projects.push(curProj);
-    } else if(curProj){
-      curProj.tipologias.push({dorm:row[15],banos:row[16],disponibles:row[17],supInt:row[18],supTer:row[19],supUtil:row[20],valorUF:row[21],ufm2:row[22]});
+    } else if(curProj&&row.some(v=>v!=='')){
+      curProj.tipologias.push({dorm:G(row,iDorm,15),banos:G(row,iBan,16),disponibles:G(row,iDisp,17),
+        supInt:G(row,iSI,18),supTer:G(row,iST,19),supUtil:G(row,iSU,20),valorUF:G(row,iUF,21),ufm2:G(row,iUM2,22)});
     }
   }
-  return {projects,headers:hdrs};
+  return projects.length?{projects,headers:hdrs}:null;
 }
 
 // ── Filtro global superficie ──
