@@ -5,6 +5,8 @@
 <title>Dashboard Inmobiliario – SITU · Aspen Capital</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <style>
 :root{
@@ -157,10 +159,10 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
 
   <!-- KPIs -->
   <div class="kpi-row">
-    <div class="kpi"><div class="kpi-val" id="kOf">—</div><div class="kpi-lbl">Oferta Disponible (últ. trim.)</div></div>
-    <div class="kpi"><div class="kpi-val" id="kVt">—</div><div class="kpi-lbl">Venta mensual (un/mes)</div></div>
-    <div class="kpi"><div class="kpi-val" id="kVl">—</div><div class="kpi-lbl">Velocidad de Venta</div></div>
-    <div class="kpi"><div class="kpi-val" id="kPr">—</div><div class="kpi-lbl">Proyectos activos</div></div>
+    <div class="kpi"><div class="kpi-val" id="kOf">—</div><div class="kpi-lbl" id="kOfLbl">Oferta Disponible (últ. trim.)</div></div>
+    <div class="kpi"><div class="kpi-val" id="kVt">—</div><div class="kpi-lbl" id="kVtLbl">Venta mensual (un/mes)</div></div>
+    <div class="kpi"><div class="kpi-val" id="kVl">—</div><div class="kpi-lbl" id="kVlLbl">Velocidad de Venta</div></div>
+    <div class="kpi"><div class="kpi-val" id="kPr">—</div><div class="kpi-lbl" id="kPrLbl">Proyectos activos</div></div>
   </div>
 
   <ul class="nav nav-tabs" id="mainTabs">
@@ -194,26 +196,12 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
         <div class="ct" id="ctEvoLabel">Evolución Oferta &amp; Venta · Historial Adimark</div>
         <canvas id="cEvo" height="72"></canvas>
       </div>
-      <div class="two-col">
-        <div class="cw"><div class="ct">% Velocidad de Venta</div><canvas id="cVel" height="110"></canvas></div>
-        <div class="cw" id="cwEvoP">
-          <div class="ct">Venta por Rango de Precio (UF) · Vitacura</div>
-          <canvas id="cEvoP" height="110"></canvas>
-          <div id="cEvoPMsg" style="display:none;padding:1.4rem;text-align:center;color:var(--dim);font-size:.72rem">Desglose por precio solo disponible para <strong>Vitacura</strong></div>
-        </div>
-      </div>
+      <div class="cw"><div class="ct">% Velocidad de Venta</div><canvas id="cVel" height="68"></canvas></div>
       <!-- ── Base de Proyectos section (muestra cuando BP cargado) ── -->
       <div id="cwBP" style="display:none;margin-top:.74rem">
         <div style="font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin:.52rem 0 .46rem;display:flex;align-items:center;gap:.3rem">
           <span style="display:inline-block;width:3px;height:.82em;background:var(--gold);border-radius:2px"></span>
           Base de Proyectos 1T 2026 —&nbsp;<span id="bpLabel" style="color:var(--navy)">Todos</span>
-        </div>
-        <div class="kpi-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:.62rem">
-          <div class="kpi"><div class="kpi-val" id="bpKpiOfe">—</div><div class="kpi-lbl">Oferta Total</div></div>
-          <div class="kpi"><div class="kpi-val" id="bpKpiDisp">—</div><div class="kpi-lbl">Disponible</div></div>
-          <div class="kpi"><div class="kpi-val" id="bpKpiVta">—</div><div class="kpi-lbl">Venta / mes</div></div>
-          <div class="kpi"><div class="kpi-val" id="bpKpiVvta">—</div><div class="kpi-lbl">% Vend. Prom.</div></div>
-          <div class="kpi"><div class="kpi-val" id="bpKpiN">—</div><div class="kpi-lbl">N° Proyectos</div></div>
         </div>
         <div class="two-col">
           <div class="cw"><div class="ct">Proyectos por Banda de % Vendido</div><canvas id="cBpN" height="110"></canvas></div>
@@ -544,6 +532,8 @@ const PRELOADED_COMUNAS=__COMUNAS__;
 <script>
 let AD=PRELOADED_ADIMARK, RE=PRELOADED_REPORTE, CM=PRELOADED_COMUNAS;
 let pA=null,pR=null,pPR=null,PR=null,pBP=null,BP=null;
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels',{display:false});
 const C={};
 let _ofS=null,_vtS=null,_ofP=null,_vtP=null,_qs=[];
 let _proyFlt='todos',_proyView='res';
@@ -745,11 +735,20 @@ function mkComLine(id,ql,datasets){
       plugins:{legend:{labels:{color:'#5c6b7a',boxWidth:11,font:{size:10}}}},
       scales:{x:GX,y:GY}}});
 }
+const RF="'Roboto',sans-serif";
 function mkBar(id,lbls,vals,col,yL){
   dk(id);
   C[id]=new Chart(document.getElementById(id),{type:'bar',
     data:{labels:lbls,datasets:[{label:yL||'',data:vals,backgroundColor:col,borderWidth:0}]},
-    options:{responsive:true,plugins:{legend:{display:false}},scales:{x:{...GX,ticks:{...GX.ticks,maxRotation:35}},y:GY}}});
+    options:{responsive:true,layout:{padding:{top:18}},
+      plugins:{
+        legend:{display:false},
+        datalabels:{display:true,anchor:'end',align:'top',clamp:true,
+          color:'#5c6b7a',font:{family:RF,size:9,weight:'500'},
+          formatter:v=>v>0?v.toLocaleString('es-CL'):''}},
+      scales:{
+        x:{...GX,ticks:{...GX.ticks,maxRotation:35,font:{family:RF,size:9}}},
+        y:{...GY,ticks:{...GY.ticks,font:{family:RF,size:9},callback:v=>v.toLocaleString('es-CL')}}}}});
 }
 
 // ── Commune filter (Comunas tab) ──
@@ -793,22 +792,6 @@ function renderEvo(){
     const vlS=toS.map((o,i)=>o>0?(tvS[i]/3)/o:0);
     mkCombo('cEvo',qs,toS,tvS.map(v=>v/3));
     mkVelLn('cVel',qs,[{label:'% Vel. Venta',data:vlS,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
-    // Desglose por precio — solo Vitacura
-    const ofP=agg(AD.oferta.byPrec,qs,pT,'p');
-    const vtP=agg(AD.venta.byPrec,qs,pT,'p');
-    // Filtrar bandas con al menos un valor > 0 y construir datasets de líneas
-    const evoPDs=ofP.lbls.map((b,i)=>({
-      label:b,
-      data:vtP.ser[b].map(v=>v/3),
-      borderColor:PC[i%PC.length],
-      backgroundColor:'transparent',
-      borderWidth:1.8,tension:.3,pointRadius:1.2,pointHoverRadius:4
-    })).filter(ds=>ds.data.some(v=>v>0));
-    document.getElementById('cEvoP').style.display='block';
-    document.getElementById('cEvoPMsg').style.display='none';
-    document.getElementById('cwEvoP').style.display='block';
-    if(evoPDs.length) mkComLine('cEvoP',qs,evoPDs);
-    else dk('cEvoP');
   } else {
     const cqs=CM.quarters.filter(q=>qN(q)>=sqn);
     const of=cqs.map(q=>CM.oferta[com]?.[q]||0);
@@ -816,11 +799,6 @@ function renderEvo(){
     const vl=of.map((o,i)=>o>0?vt[i]/o:0);
     mkCombo('cEvo',cqs,of,vt);
     mkVelLn('cVel',cqs,[{label:'% Vel. Venta',data:vl,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
-    // Mostrar placeholder en lugar de ocultar el panel
-    dk('cEvoP');
-    document.getElementById('cEvoP').style.display='none';
-    document.getElementById('cEvoPMsg').style.display='block';
-    document.getElementById('cwEvoP').style.display='block';
   }
   renderEvoBP();
 }
@@ -1256,6 +1234,17 @@ function renderAll(){
   const vlS=toS.map((o,i)=>o>0?(tvS[i]/3)/o:0);
   const vlP=toP.map((o,i)=>o>0?(tvP[i]/3)/o:0);
 
+  // KPIs Adimark — se ponen ANTES de renderEvo para que BP pueda sobrescribirlos después
+  const lOf=toS[toS.length-1]||0,lVt=(tvS[tvS.length-1]||0)/3,lVl=vlS[vlS.length-1]||0;
+  document.getElementById('kOf').textContent=Math.round(lOf).toLocaleString('es-CL');
+  document.getElementById('kOfLbl').textContent='Oferta Disponible (últ. trim.)';
+  document.getElementById('kVt').textContent=lVt.toFixed(1);
+  document.getElementById('kVtLbl').textContent='Venta mensual (un/mes)';
+  document.getElementById('kVl').textContent=(lVl*100).toFixed(1)+'%';
+  document.getElementById('kVlLbl').textContent='Velocidad de Venta';
+  document.getElementById('kPr').textContent=RE.proyData.filter(r=>r[0]&&r[0]!=='—').length;
+  document.getElementById('kPrLbl').textContent='Proyectos activos';
+
   renderEvo();
 
   // Sup
@@ -1283,12 +1272,6 @@ function renderAll(){
   // Comunas
   renderComunas();
 
-  // KPIs
-  const lOf=toS[toS.length-1]||0,lVt=(tvS[tvS.length-1]||0)/3,lVl=vlS[vlS.length-1]||0;
-  document.getElementById('kOf').textContent=Math.round(lOf).toLocaleString('es-CL');
-  document.getElementById('kVt').textContent=lVt.toFixed(1);
-  document.getElementById('kVl').textContent=(lVl*100).toFixed(1)+'%';
-  document.getElementById('kPr').textContent=RE.proyData.filter(r=>r[0]&&r[0]!=='—').length;
   if(RE.period)document.getElementById('periodBadge').textContent=RE.period;
   document.getElementById('dataSrc').textContent='GFK Adimark · GfK Reporte — '+(_qs[0]||'')+' – '+(_qs[_qs.length-1]||'');
 
@@ -1440,19 +1423,31 @@ function renderEvoBP(){
   const tpo=document.getElementById('evoTipo').value;
   let projs=BP.projects.filter(p=>p.comuna===com);
   if(tpo)projs=projs.filter(p=>p.tpo===tpo);
-  if(!projs.length){cwBP.style.display='none';return;}
+  if(!projs.length){
+    cwBP.style.display='none';
+    // Restaurar labels Adimark si BP no tiene datos para esta comuna
+    document.getElementById('kOfLbl').textContent='Oferta Disponible (últ. trim.)';
+    document.getElementById('kVtLbl').textContent='Venta mensual (un/mes)';
+    document.getElementById('kVlLbl').textContent='Velocidad de Venta';
+    document.getElementById('kPrLbl').textContent='Proyectos activos';
+    return;
+  }
   cwBP.style.display='block';
-  const tpoLbl=tpo==='DEPARTAMENTO'?'Departamentos':tpo==='CASA'?'Casas':'Todos (Depto+Casa)';
+  const tpoLbl=tpo==='DEPARTAMENTO'?'Departamentos':tpo==='CASA'?'Casas':'Todos';
   document.getElementById('bpLabel').textContent=com.charAt(0)+com.slice(1).toLowerCase()+' · '+tpoLbl;
   const totalOfe=projs.reduce((s,p)=>s+p.ofe,0);
   const totalDisp=projs.reduce((s,p)=>s+p.disponible,0);
   const totalVta=projs.reduce((s,p)=>s+p.vta,0);
   const avgVvta=projs.reduce((s,p)=>s+p.vvta,0)/projs.length;
-  document.getElementById('bpKpiOfe').textContent=Math.round(totalOfe).toLocaleString('es-CL');
-  document.getElementById('bpKpiDisp').textContent=Math.round(totalDisp).toLocaleString('es-CL');
-  document.getElementById('bpKpiVta').textContent=totalVta.toFixed(1);
-  document.getElementById('bpKpiVvta').textContent=avgVvta.toFixed(1)+'%';
-  document.getElementById('bpKpiN').textContent=projs.length;
+  // Sobrescribir KPIs globales con datos BP
+  document.getElementById('kOf').textContent=Math.round(totalDisp).toLocaleString('es-CL');
+  document.getElementById('kOfLbl').textContent='Disponible (Base Proy.)';
+  document.getElementById('kVt').textContent=totalVta.toFixed(1);
+  document.getElementById('kVtLbl').textContent='Venta/mes (Base Proy.)';
+  document.getElementById('kVl').textContent=avgVvta.toFixed(1)+'%';
+  document.getElementById('kVlLbl').textContent='% Vendido Prom.';
+  document.getElementById('kPr').textContent=projs.length;
+  document.getElementById('kPrLbl').textContent='N° Proyectos (BP)';
   // Bandas 0-10%,...,90-100%
   const bLbls2=['0-10%','10-20%','20-30%','30-40%','40-50%','50-60%','60-70%','70-80%','80-90%','90-100%'];
   const bN=new Array(10).fill(0),bDisp=new Array(10).fill(0);
