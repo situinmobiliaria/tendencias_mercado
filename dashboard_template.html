@@ -211,13 +211,21 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
           <div class="cw"><div class="ct">Precio Promedio (UF mín) por Banda de Avance</div><canvas id="cBpPrec" height="110"></canvas></div>
           <div class="cw"><div class="ct">UF/m² Promedio por Banda de Avance</div><canvas id="cBpUfm2" height="110"></canvas></div>
         </div>
+        <div class="cw">
+          <div class="ct">% Vendido por Proyecto — <span id="bpProjChartLbl">Todos</span></div>
+          <canvas id="cBpProj" height="100"></canvas>
+        </div>
       </div>
     </div>
 
     <!-- ── POR SUPERFICIE ── -->
     <div class="tab-pane fade" id="tSup">
       <div class="flt-row">
-        <span class="flt-lbl">Rango destacado</span>
+        <span class="flt-lbl">Comuna</span>
+        <select class="flt-sel" id="supComuna" style="max-width:160px" onchange="renderSup()">
+          <option value="VITACURA">Vitacura (Adimark)</option>
+        </select>
+        <span class="flt-lbl" style="margin-left:.4rem">Rango destacado</span>
         <select class="flt-sel" id="selSupBand" onchange="updateSupDrill()"><option value="">— Todos —</option></select>
         <span class="flt-note" id="supBandNote" style="display:none">Análisis detallado del rango seleccionado</span>
       </div>
@@ -240,7 +248,11 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
     <!-- ── POR PRECIO ── -->
     <div class="tab-pane fade" id="tPrc">
       <div class="flt-row">
-        <span class="flt-lbl">Rango destacado</span>
+        <span class="flt-lbl">Comuna</span>
+        <select class="flt-sel" id="prcComuna" style="max-width:160px" onchange="renderPrc()">
+          <option value="VITACURA">Vitacura (Adimark)</option>
+        </select>
+        <span class="flt-lbl" style="margin-left:.4rem">Rango destacado</span>
         <select class="flt-sel" id="selPrcBand" onchange="updatePrcDrill()"><option value="">— Todos —</option></select>
         <span class="flt-note" id="prcBandNote" style="display:none">Análisis detallado del rango seleccionado</span>
       </div>
@@ -260,9 +272,17 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
 
     <!-- ── SNAPSHOT ── -->
     <div class="tab-pane fade" id="tSnap">
-      <div class="two-col">
-        <div class="cw"><div class="ct">Oferta vs Venta — Superficie · Período Actual</div><canvas id="cSSn" height="130"></canvas></div>
-        <div class="cw"><div class="ct">Oferta vs Venta — Precio UF · Período Actual</div><canvas id="cPSn" height="130"></canvas></div>
+      <div class="flt-row">
+        <span class="flt-lbl">Período</span>
+        <span class="flt-note" id="snapPeriodLbl" style="margin-left:0">—</span>
+      </div>
+      <div class="cw">
+        <div class="ct">Oferta Disponible vs Venta Trimestral por Superficie · % Venta/Oferta</div>
+        <canvas id="cSSn" height="110"></canvas>
+      </div>
+      <div class="cw">
+        <div class="ct">Oferta Disponible vs Venta Trimestral por Precio UF · % Venta/Oferta</div>
+        <canvas id="cPSn" height="110"></canvas>
       </div>
     </div>
 
@@ -279,6 +299,12 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
 
     <!-- ── PROYECTOS ── -->
     <div class="tab-pane fade" id="tProy">
+      <div class="flt-row" id="proyComFltRow" style="display:none;margin-bottom:.44rem">
+        <span class="flt-lbl">Comuna</span>
+        <div id="proyComBtns" style="display:flex;gap:.24rem;flex-wrap:wrap"></div>
+        <button class="flt-btn" style="font-size:.6rem;margin-left:auto" onclick="repComSelAll(true)">Todas</button>
+        <button class="flt-btn" style="font-size:.6rem" onclick="repComSelAll(false)">Ninguna</button>
+      </div>
       <div class="flt-btns" id="proyEstFlt">
         <button class="flt-btn active" data-est="todos" onclick="setProyFlt(this)">Todos</button>
         <button class="flt-btn" data-est="ejec" onclick="setProyFlt(this)">En ejecución</button>
@@ -304,7 +330,7 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
     <!-- ── DASHBOARD PROYECTOS ── -->
     <div class="tab-pane fade" id="tDash">
       <div id="dashNoData" class="flt-note" style="margin-bottom:.6rem;display:block">
-        Datos base cargados. Carga un <strong>Reporte de Proyectos</strong> adicional desde el panel lateral para ampliar el universo.
+        Carga el GfK Reporte en el panel lateral para ver datos de proyectos. El mismo archivo soporta múltiples comunas.
       </div>
 
       <!-- Fila 1: Selección de proyectos (agregado) + filtros globales -->
@@ -428,7 +454,10 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
             <span style="font-size:.57rem;color:var(--dim)">% de permisos que entran al mercado</span>
           </div>
           <div class="sim-inp">
-            <label>Permisos anuales (total)</label>
+            <label>Permisos anuales — Comuna</label>
+            <select class="form-select form-select-sm" id="projPermComuna" onchange="updateProjPerm()" style="margin-bottom:.18rem">
+              <option value="">— Manual —</option>
+            </select>
             <input type="number" class="form-control form-control-sm" id="projPerm" value="1000" min="0" step="100">
           </div>
           <div class="sim-inp">
@@ -472,23 +501,13 @@ input.form-control:focus,select.form-select:focus{border-color:var(--navy)!impor
     <button class="btn-act btn-gold" id="btnUpd" onclick="doUpdate()" disabled>Actualizar dashboard</button>
     <div class="upd-st" id="updSt"></div>
   </div>
-  <!-- Upload 3: Reporte Proyectos -->
-  <div class="sb-sec">
-    <div class="sb-ttl">Dashboard Proyectos</div>
-    <div class="uz" id="z3" onclick="document.getElementById('f3').click()" ondragover="zev(event,'z3',1)" ondragleave="zev(event,'z3',0)" ondrop="zdrop(event,'p')">
-      <div class="uz-icon">🏗</div><div class="uz-name">Reporte de Proyectos</div><div class="uz-sub">Multi-comunas (.xls / .xlsx)</div>
-    </div>
-    <input type="file" id="f3" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'p')">
-    <button class="btn-act" id="btnPR" onclick="doPR()" disabled style="margin-top:.32rem">Cargar proyectos</button>
-    <div class="upload-note">Mismo formato GfK · Multi-comunas</div>
-  </div>
-  <!-- Upload 4: Base de Proyectos -->
+  <!-- Upload 3: Base de Proyectos -->
   <div class="sb-sec">
     <div class="sb-ttl">Base de Proyectos</div>
-    <div class="uz" id="z4" onclick="document.getElementById('f4').click()" ondragover="zev(event,'z4',1)" ondragleave="zev(event,'z4',0)" ondrop="zdrop(event,'b')">
+    <div class="uz" id="z3" onclick="document.getElementById('f3').click()" ondragover="zev(event,'z3',1)" ondragleave="zev(event,'z3',0)" ondrop="zdrop(event,'b')">
       <div class="uz-icon">📊</div><div class="uz-name">GFK Base Proyectos</div><div class="uz-sub">Base Proyectos 1T (.xls)</div>
     </div>
-    <input type="file" id="f4" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'b')">
+    <input type="file" id="f3" accept=".xls,.xlsx" style="display:none" onchange="hFile(event,'b')">
     <div class="upload-note">Actualiza sección Base en tab Evolución</div>
   </div>
   <!-- Band config -->
@@ -531,11 +550,11 @@ const PRELOADED_COMUNAS=__COMUNAS__;
 </script>
 <script>
 let AD=PRELOADED_ADIMARK, RE=PRELOADED_REPORTE, CM=PRELOADED_COMUNAS;
-let pA=null,pR=null,pPR=null,PR=null,pBP=null,BP=null;
+let pA=null,pR=null,PR=null,pBP=null,BP=null;
 Chart.register(ChartDataLabels);
 Chart.defaults.set('plugins.datalabels',{display:false});
 const C={};
-let _ofS=null,_vtS=null,_ofP=null,_vtP=null,_qs=[];
+let _ofS=null,_vtS=null,_ofP=null,_vtP=null,_qs=[],_repCom=null;
 let _proyFlt='todos',_proyView='res';
 let _selComs=new Set(['VITACURA','LAS CONDES','PROVIDENCIA','SANTIAGO']);
 let _dashSelectedProjs=null; // null=todos; Set=seleccionados específicos
@@ -543,7 +562,7 @@ let _dashProjListKey=''; // para detectar cambio de lista
 
 // ── Upload / file handling ──
 function zev(e,id,on){e.preventDefault();document.getElementById(id).classList.toggle('over',!!on);}
-function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','p':'z3','b':'z4'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
+function zdrop(e,t){e.preventDefault();const id={'a':'z1','r':'z2','b':'z3'}[t];document.getElementById(id).classList.remove('over');if(e.dataTransfer.files[0])pFile(e.dataTransfer.files[0],t);}
 function hFile(e,t){if(e.target.files[0])pFile(e.target.files[0],t);}
 function progBar(pct){
   const b=document.getElementById('gProgBar');if(!b)return;
@@ -555,7 +574,7 @@ function showZLoad(zid,name){
   z.innerHTML='<div class="uz-spin"></div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">Procesando…</div>';
 }
 function pFile(file,type){
-  const zmap={a:'z1',r:'z2',p:'z3',b:'z4'};
+  const zmap={a:'z1',r:'z2',b:'z3'};
   showZLoad(zmap[type],file.name);
   progBar(25);
   const rd=new FileReader();
@@ -566,31 +585,15 @@ function pFile(file,type){
         const wb=XLSX.read(new Uint8Array(ev.target.result),{type:'array'});
         if(type==='a'){pA=parseAdimark(wb);markZ('z1',file.name);}
         else if(type==='r'){pR=parseReporte(wb);markZ('z2',file.name);}
-        else if(type==='p'){
-          let parsed=parseProyReport(wb);
-          if(!parsed){
-            // Fallback: mismo formato GfK Reporte estándar
-            const re=parseReporte(wb);
-            if(re&&re.proyData&&re.proyData.length){
-              parsed={projects:buildProjectsFromData(re.proyData),headers:[]};
-            }
-          }
-          pPR=parsed;
-          if(parsed){markZ('z3',file.name);document.getElementById('btnPR').disabled=false;}
-          else{
-            const zz=document.getElementById('z3');zz.classList.remove('ok');
-            zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">'+file.name+'</div><div class="uz-sub">Sin hoja Proyectos — clic para reintentar</div>';
-          }
-        }
         else if(type==='b'){
           const parsed=parseBP(wb);
-          if(parsed){BP=parsed;markZ('z4',file.name);renderEvoBP();}
+          if(parsed){BP=parsed;markZ('z3',file.name);renderEvoBP();}
           else{
-            const zz=document.getElementById('z4');zz.classList.remove('ok');
+            const zz=document.getElementById('z3');zz.classList.remove('ok');
             zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">'+file.name+'</div><div class="uz-sub">Sin hoja Base Proyectos</div>';
           }
         }
-        if(type!=='p'&&type!=='b')chkReady();
+        if(type!=='b')chkReady();
       }catch(e){
         const zz=document.getElementById(zmap[type]);zz.classList.remove('ok');
         zz.innerHTML='<div style="color:var(--burg);font-size:1.1rem">⚠</div><div class="uz-name" style="font-size:.65rem">Error al leer</div><div class="uz-sub">'+(e.message||'').slice(0,50)+'</div>';
@@ -603,7 +606,7 @@ function pFile(file,type){
 function markZ(id,name){
   const z=document.getElementById(id);z.classList.add('ok');
   z.innerHTML='<div style="color:var(--navy2);font-size:1rem">✔</div><div class="uz-name" style="font-size:.65rem">'+name+'</div><div class="uz-sub">listo — clic para cambiar</div>';
-  const map={'z1':'f1','z2':'f2','z3':'f3','z4':'f4'};
+  const map={'z1':'f1','z2':'f2','z3':'f3'};
   z.onclick=()=>document.getElementById(map[id]).click();
 }
 function chkReady(){
@@ -614,23 +617,68 @@ function chkReady(){
 function doUpdate(){
   if(pA)AD=pA; if(pR)RE=pR;
   pA=null;pR=null;
+  // Auto-populate PR from same RE data (single file for all project data)
+  PR=null;_repCom=null;
+  if(RE&&RE.proyData&&RE.proyData.length){
+    PR={projects:buildProjectsFromData(RE.proyData),headers:[]};
+    RE.comunas=[...new Set(RE.proyData.map(r=>r[5]).filter(Boolean))].sort();
+  } else {
+    RE.comunas=[];
+  }
   resetZ('z1','f1','GFK Adimark','Series Históricas (.xls)');
   resetZ('z2','f2','GfK Reporte','Reporte Inmobiliario (.xls)');
   document.getElementById('btnUpd').disabled=true;
   document.getElementById('updSt').textContent='';
   fillQ(); renderAll();
 }
-function doPR(){
-  if(pPR){PR=pPR;pPR=null;}
-  document.getElementById('btnPR').disabled=true;
-  progBar(40);
-  setTimeout(()=>{renderDash();progBar(0);},10);
-}
 function resetZ(zid,fid,name,sub){
   const z=document.getElementById(zid);z.classList.remove('ok');
   z.innerHTML='<div class="uz-icon">📂</div><div class="uz-name">'+name+'</div><div class="uz-sub">'+sub+'</div>';
   z.onclick=()=>document.getElementById(fid).click();
   document.getElementById(fid).value='';
+}
+
+// ── Commune filter helpers (Reporte multi-commune) ──
+function filtPD(){
+  if(!_repCom||_repCom.size===0)return RE.proyData;
+  return RE.proyData.filter(r=>_repCom.has(r[5]));
+}
+function repComSelAll(all){
+  _repCom=all?null:new Set();
+  buildRepComFlt();renderAll();
+}
+function buildRepComFlt(){
+  const coms=RE.comunas||[];
+  const row=document.getElementById('proyComFltRow');
+  if(row)row.style.display=coms.length>1?'flex':'none';
+  const wrap=document.getElementById('proyComBtns');
+  if(!wrap)return;
+  wrap.innerHTML='';
+  coms.forEach(c=>{
+    const btn=document.createElement('button');
+    btn.className='flt-btn'+(!_repCom||_repCom.has(c)?' active':'');
+    btn.style.cssText='font-size:.6rem;padding:.13rem .42rem';
+    btn.textContent=c.charAt(0)+c.slice(1).toLowerCase();
+    btn.onclick=()=>{
+      if(!_repCom)_repCom=new Set(coms);
+      if(_repCom.has(c)){if(_repCom.size>1)_repCom.delete(c);}else _repCom.add(c);
+      buildRepComFlt();renderAll();
+    };
+    wrap.appendChild(btn);
+  });
+  // Also populate supComuna, prcComuna, projPermComuna dropdowns
+  ['supComuna','prcComuna'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML='<option value="VITACURA">Vitacura (Adimark)</option>'+
+      coms.filter(c=>c!=='VITACURA').map(c=>'<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c.charAt(0)+c.slice(1).toLowerCase()+'</option>').join('');
+  });
+  const ppc=document.getElementById('projPermComuna');
+  if(ppc){
+    const cur=ppc.value;
+    ppc.innerHTML='<option value="">— Manual —</option>'+
+      coms.map(c=>'<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c.charAt(0)+c.slice(1).toLowerCase()+'</option>').join('');
+  }
 }
 
 // ── Quarter ──
@@ -719,14 +767,24 @@ function mkCombo(id,ql,barData,lineData,barLbl,lineLbl){
         yVt:{...GY,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Venta (un/mes)',color:'#b8915a'},ticks:{color:'#b8915a',font:{size:9}}}
       }}});
 }
-function mkGr(id,lbls,dA,dB){
+function mkSnapCombo(id,lbls,ofData,vtData){
   dk(id);
-  C[id]=new Chart(document.getElementById(id),{type:'bar',
+  const pctData=ofData.map((o,i)=>o>0?vtData[i]/o*100:0);
+  C[id]=new Chart(document.getElementById(id),{
     data:{labels:lbls,datasets:[
-      {label:'Oferta Disponible',data:dA,backgroundColor:'rgba(26,58,107,.7)',borderColor:'#1a3a6b',borderWidth:1},
-      {label:'Venta Trimestral', data:dB,backgroundColor:'rgba(184,145,90,.75)',borderColor:'#b8915a',borderWidth:1}
+      {type:'bar',label:'Oferta Disponible',data:ofData,backgroundColor:'rgba(26,58,107,.68)',borderColor:'#1a3a6b',borderWidth:1,yAxisID:'yOf',order:3},
+      {type:'bar',label:'Venta Trimestral',data:vtData,backgroundColor:'rgba(184,145,90,.75)',borderColor:'#b8915a',borderWidth:1,yAxisID:'yOf',order:2},
+      {type:'line',label:'% Venta/Oferta',data:pctData,borderColor:'#7b1c2e',backgroundColor:'transparent',borderWidth:2.2,pointRadius:3,pointHoverRadius:5,tension:.3,yAxisID:'yPct',order:1}
     ]},
-    options:{responsive:true,plugins:{legend:{labels:{color:'#5c6b7a',font:{size:10}}}},scales:{x:GX,y:GY}}});
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{
+        legend:{labels:{color:'#5c6b7a',font:{size:10}}},
+        datalabels:{display:false}},
+      scales:{x:{...GX,ticks:{...GX.ticks,maxRotation:40}},
+        yOf:{...GY,position:'left',title:{display:true,text:'Unidades',color:'#8a9ab0'}},
+        yPct:{position:'right',grid:{drawOnChartArea:false},
+          ticks:{color:'#7b1c2e',font:{size:9},callback:v=>v.toFixed(1)+'%'},
+          title:{display:true,text:'% Vta/Oferta',color:'#7b1c2e'}}}}});
 }
 function mkComLine(id,ql,datasets){
   dk(id);
@@ -803,6 +861,51 @@ function renderEvo(){
   renderEvoBP();
 }
 
+// ── Por Superficie / Por Precio with commune switch ──
+function renderSup(){
+  const com=document.getElementById('supComuna')?document.getElementById('supComuna').value:'VITACURA';
+  if(com==='VITACURA'){
+    // Use Adimark data — already rendered in renderAll; just re-run the Sup charts
+    mkSt('cSOf',_qs,_ofS.lbls,_ofS.ser,SC,'Unidades');
+    const vtSm={};_ofS.lbls.forEach(b=>vtSm[b]=_vtS.ser[b].map(v=>v/3));
+    mkSt('cSVt',_qs,_ofS.lbls,vtSm,SC,'Unidades/mes');
+    const vlS2=_qs.map((_,i)=>{const o=_ofS.lbls.reduce((s,b)=>s+(_ofS.ser[b][i]||0),0);const v=_ofS.lbls.reduce((s,b)=>s+(_vtS.ser[b][i]||0),0)/3;return o>0?v/o:0;});
+    mkVelLn('cSVl',_qs,[{label:'Total',data:vlS2,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},..._ofS.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofS.ser[b][qi]>0?(_vtS.ser[b][qi]/3)/_ofS.ser[b][qi]:0),borderColor:SC[i%SC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))]);
+  } else {
+    // Use CM commune data — total only, no surface breakdown
+    const {stQ}=getCfg();const sqn=qN(stQ);
+    const cqs=CM.quarters.filter(q=>qN(q)>=sqn);
+    const of=cqs.map(q=>CM.oferta[com]?.[q]||0);
+    const vt=cqs.map(q=>(CM.venta[com]?.[q]||0)/3);
+    const vl=of.map((o,i)=>o>0?vt[i]/o:0);
+    // Show as stacked with single dataset
+    dk('cSOf');dk('cSVt');dk('cSVl');
+    mkCombo('cSOf',cqs,of,vt,'Oferta '+com,'Venta/mes '+com);
+    mkVelLn('cSVl',cqs,[{label:'% Vel.',data:vl,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
+  }
+  updateSupDrill();
+}
+function renderPrc(){
+  const com=document.getElementById('prcComuna')?document.getElementById('prcComuna').value:'VITACURA';
+  if(com==='VITACURA'){
+    const vtPmes={};_ofP.lbls.forEach(b=>vtPmes[b]=_vtP.ser[b].map(v=>v/3));
+    mkSt('cPOf',_qs,_ofP.lbls,_ofP.ser,PC,'Unidades');
+    mkSt('cPVt',_qs,_ofP.lbls,vtPmes,PC,'Unidades/mes');
+    const vlP2=_qs.map((_,i)=>{const o=_ofP.lbls.reduce((s,b)=>s+(_ofP.ser[b][i]||0),0);const v=_ofP.lbls.reduce((s,b)=>s+(_vtP.ser[b][i]||0),0)/3;return o>0?v/o:0;});
+    mkVelLn('cPVl',_qs,[{label:'Total',data:vlP2,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},..._ofP.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofP.ser[b][qi]>0?(_vtP.ser[b][qi]/3)/_ofP.ser[b][qi]:0),borderColor:PC[i%PC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))]);
+  } else {
+    const {stQ}=getCfg();const sqn=qN(stQ);
+    const cqs=CM.quarters.filter(q=>qN(q)>=sqn);
+    const of=cqs.map(q=>CM.oferta[com]?.[q]||0);
+    const vt=cqs.map(q=>(CM.venta[com]?.[q]||0)/3);
+    const vl=of.map((o,i)=>o>0?vt[i]/o:0);
+    dk('cPOf');dk('cPVt');dk('cPVl');
+    mkCombo('cPOf',cqs,of,vt,'Oferta '+com,'Venta/mes '+com);
+    mkVelLn('cPVl',cqs,[{label:'% Vel.',data:vl,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2}]);
+  }
+  updatePrcDrill();
+}
+
 // ── Superficie drill ──
 function fillBandSelects(){
   const {sT,pT}=getCfg();
@@ -873,6 +976,21 @@ function renderComunas(){
   mkVelLn('cComVl',cqs,ds((com,q)=>{const o=CM.oferta[com]?.[q]||0,v=CM.venta[com]?.[q]||0;return o>0?(v/3)/o:0;}));
 }
 
+function updateProjPerm(){
+  const com=document.getElementById('projPermComuna').value;
+  if(!com){return;}
+  // Use sum of permits from RE.permData for selected commune, if COMUNA column exists
+  const hi=RE.permHeaders||[];
+  const ciCom=hi.findIndex(h=>String(h).toUpperCase().includes('COMUNA')||String(h).toUpperCase().includes('COMUN'));
+  const ciMnt=hi.findIndex(h=>String(h).toUpperCase().includes('MONTO')||String(h).toUpperCase().includes('VIVI')||String(h).toUpperCase().includes('UNID'));
+  if(ciCom>=0&&ciMnt>=0){
+    const sum=RE.permData.filter(r=>String(r[ciCom]).toUpperCase().includes(com.toUpperCase()))
+      .reduce((s,r)=>s+(parseFloat(r[ciMnt])||0),0);
+    if(sum>0){document.getElementById('projPerm').value=Math.round(sum);return;}
+  }
+  // fallback: use stock from CM
+  updateProjDefaults();
+}
 // ── Proyección defaults ──
 function fillProjComuna(){
   const sel=document.getElementById('projComuna');
@@ -1150,7 +1268,7 @@ function setProyView(v,btn){
   renderProyectos();
 }
 function renderProyectos(){
-  const all=RE.proyData.filter(r=>r[0]&&r[0]!=='—');
+  const all=filtPD().filter(r=>r[0]&&r[0]!=='—');
   const ejecSet=new Set(['FUNDACIONES','OBRA GRUESA','TERMINACIONES']);
   let rows=all;
   if(_proyFlt==='ejec') rows=all.filter(r=>ejecSet.has(String(r[6]).toUpperCase().trim()));
@@ -1242,32 +1360,20 @@ function renderAll(){
   document.getElementById('kVtLbl').textContent='Venta mensual (un/mes)';
   document.getElementById('kVl').textContent=(lVl*100).toFixed(1)+'%';
   document.getElementById('kVlLbl').textContent='Velocidad de Venta';
-  document.getElementById('kPr').textContent=RE.proyData.filter(r=>r[0]&&r[0]!=='—').length;
+  document.getElementById('kPr').textContent=filtPD().filter(r=>r[0]&&r[0]!=='—').length;
   document.getElementById('kPrLbl').textContent='Proyectos activos';
 
   renderEvo();
 
-  // Sup
-  mkSt('cSOf',_qs,_ofS.lbls,_ofS.ser,SC,'Unidades');
-  const vtSm={};_ofS.lbls.forEach(b=>vtSm[b]=_vtS.ser[b].map(v=>v/3));
-  mkSt('cSVt',_qs,_ofS.lbls,vtSm,SC,'Unidades/mes');
-  mkVelLn('cSVl',_qs,[
-    {label:'Total',data:vlS,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},
-    ..._ofS.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofS.ser[b][qi]>0?(_vtS.ser[b][qi]/3)/_ofS.ser[b][qi]:0),borderColor:SC[i%SC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))
-  ]);
-
-  // Prec
-  const vtPmes={};_ofP.lbls.forEach(b=>vtPmes[b]=_vtP.ser[b].map(v=>v/3));
-  mkSt('cPOf',_qs,_ofP.lbls,_ofP.ser,PC,'Unidades');
-  mkSt('cPVt',_qs,_ofP.lbls,vtPmes,PC,'Unidades/mes');
-  mkVelLn('cPVl',_qs,[
-    {label:'Total',data:vlP,borderColor:'#b8915a',backgroundColor:'rgba(184,145,90,.09)',fill:true,tension:.3,borderWidth:2.5,pointRadius:2},
-    ..._ofP.lbls.map((b,i)=>({label:b,data:_qs.map((_,qi)=>_ofP.ser[b][qi]>0?(_vtP.ser[b][qi]/3)/_ofP.ser[b][qi]:0),borderColor:PC[i%PC.length],backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:1.2}))
-  ]);
+  // Sup & Prc — delegate to renderSup/renderPrc which support commune switch
+  renderSup();
+  renderPrc();
 
   // Snapshot
-  const ss=RE.supSnap.data;if(ss.length)mkGr('cSSn',ss.map(d=>d.label),ss.map(d=>d.oferta),ss.map(d=>d.venta));
-  const ps=RE.precSnap.data;if(ps.length)mkGr('cPSn',ps.map(d=>d.label),ps.map(d=>d.oferta),ps.map(d=>d.venta));
+  const period2=RE.supSnap.period||RE.precSnap.period||RE.period||'';
+  const snapLbl=document.getElementById('snapPeriodLbl');if(snapLbl)snapLbl.textContent=period2||'Período actual';
+  const ss=RE.supSnap.data;if(ss.length)mkSnapCombo('cSSn',ss.map(d=>d.label),ss.map(d=>d.oferta),ss.map(d=>d.venta));
+  const ps=RE.precSnap.data;if(ps.length)mkSnapCombo('cPSn',ps.map(d=>d.label),ps.map(d=>d.oferta),ps.map(d=>d.venta));
 
   // Comunas
   renderComunas();
@@ -1275,6 +1381,7 @@ function renderAll(){
   if(RE.period)document.getElementById('periodBadge').textContent=RE.period;
   document.getElementById('dataSrc').textContent='GFK Adimark · GfK Reporte — '+(_qs[0]||'')+' – '+(_qs[_qs.length-1]||'');
 
+  buildRepComFlt();
   fillBandSelects();
   updateSupDrill();
   updatePrcDrill();
@@ -1466,6 +1573,23 @@ function renderEvoBP(){
   mkBar('cBpDisp',bLbls2,bDisp,bCol,'Unidades disp.');
   mkBar('cBpPrec',bLbls2,avgPrec,bCol,'UF mín prom.');
   mkBar('cBpUfm2',bLbls2,avgUfm2b,bCol,'UF/m² prom.');
+  // Per-project chart: each project as a bar showing disponible + vvta line
+  const projSorted=[...projs].sort((a,b)=>b.vvta-a.vvta);
+  const pNames=projSorted.map(p=>(p.nombre||p.id||'?').slice(0,22));
+  document.getElementById('bpProjChartLbl').textContent=tpoLbl;
+  dk('cBpProj');
+  C['cBpProj']=new Chart(document.getElementById('cBpProj'),{
+    data:{labels:pNames,datasets:[
+      {type:'bar',label:'Disponible',data:projSorted.map(p=>p.disponible),backgroundColor:'rgba(26,58,107,.68)',borderColor:'#1a3a6b',borderWidth:1,yAxisID:'yD',order:2},
+      {type:'line',label:'% Vendido',data:projSorted.map(p=>p.vvta),borderColor:'#b8915a',backgroundColor:'transparent',borderWidth:2,pointRadius:2,tension:.2,yAxisID:'yV',order:1}
+    ]},
+    options:{responsive:true,interaction:{mode:'index'},
+      plugins:{legend:{labels:{color:'#5c6b7a',font:{size:10}}},datalabels:{display:false}},
+      scales:{x:{...GX,ticks:{...GX.ticks,maxRotation:55,font:{family:RF,size:8}}},
+        yD:{...GY,position:'left',title:{display:true,text:'Disponible',color:'#8a9ab0'}},
+        yV:{position:'right',grid:{drawOnChartArea:false},
+          ticks:{color:'#b8915a',font:{size:9},callback:v=>v.toFixed(0)+'%'},
+          min:0,max:100,title:{display:true,text:'% Vendido',color:'#b8915a'}}}}});
 }
 
 // ── Filtro global superficie ──
